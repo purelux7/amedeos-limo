@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9f3fb"/>
+      <stop offset="1" stop-color="#d7e9f5"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.36" r="0.75">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d7e9f5"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <rect width="800" height="1000" fill="url(#vig)"/>
+  <!-- shoulders / suit -->
+  <path d="M150 1000 C170 760 280 700 400 700 C520 700 630 760 650 1000 Z" fill="#243a52"/>
+  <path d="M360 720 L400 820 L440 720 Z" fill="#ffffff"/>
+  <path d="M392 720 L400 1000 L408 720 Z" fill="#d3a23d"/>
+  <!-- collar -->
+  <path d="M330 705 L400 760 L400 720 Z" fill="#2c4865"/>
+  <path d="M470 705 L400 760 L400 720 Z" fill="#2c4865"/>
+  <!-- head -->
+  <ellipse cx="400" cy="470" rx="120" ry="145" fill="#e9c9a8"/>
+  <path d="M286 408 C298 318 502 318 514 408 C524 470 502 356 400 356 C298 356 276 470 286 408 Z" fill="#6b4a32"/>
+  <!-- soft smile hint -->
+  <path d="M360 520 Q400 552 440 520" stroke="#c08a63" stroke-width="6" fill="none" stroke-linecap="round"/>
+</svg>
