@@ -1,60 +1,79 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8fd0f5"/>
-      <stop offset="0.55" stop-color="#cdeafb"/>
-      <stop offset="1" stop-color="#fbf6ea"/>
+      <stop offset="0" stop-color="#d9cdb6"/>
+      <stop offset="0.45" stop-color="#e7ddca"/>
+      <stop offset="0.78" stop-color="#efe7d7"/>
+      <stop offset="1" stop-color="#f4efe4"/>
     </linearGradient>
-    <radialGradient id="sun" cx="0.78" cy="0.2" r="0.5">
-      <stop offset="0" stop-color="#fff6da" stop-opacity="0.95"/>
-      <stop offset="1" stop-color="#fff6da" stop-opacity="0"/>
+    <radialGradient id="haze" cx="0.66" cy="0.34" r="0.55">
+      <stop offset="0" stop-color="#fbf3df" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#fbf3df" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#cfc6b6"/>
-      <stop offset="1" stop-color="#a89c87"/>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfc6b4"/>
+      <stop offset="1" stop-color="#bdb4a1"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b3a37"/>
+      <stop offset="0.5" stop-color="#26241f"/>
+      <stop offset="1" stop-color="#16140f"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6f6c63"/>
+      <stop offset="1" stop-color="#4a473f"/>
     </linearGradient>
   </defs>
+
   <rect width="1920" height="1080" fill="url(#sky)"/>
-  <rect width="1920" height="1080" fill="url(#sun)"/>
-  <!-- distant skyline, light -->
-  <g fill="#bcd6e6" opacity="0.7">
-    <rect x="80"  y="470" width="70"  height="180"/>
-    <rect x="170" y="430" width="55"  height="220"/>
-    <rect x="245" y="500" width="80"  height="150"/>
-    <rect x="345" y="400" width="60"  height="250"/>
-    <rect x="420" y="470" width="90"  height="180"/>
-    <rect x="1450" y="450" width="70" height="200"/>
-    <rect x="1535" y="410" width="60" height="240"/>
-    <rect x="1610" y="490" width="85" height="160"/>
-    <rect x="1710" y="440" width="55" height="210"/>
+  <rect width="1920" height="1080" fill="url(#haze)"/>
+
+  <!-- faint horizon treeline, very soft -->
+  <rect x="0" y="690" width="1920" height="60" fill="#cdc4b0" opacity="0.45"/>
+  <!-- ground plane -->
+  <rect x="0" y="744" width="1920" height="336" fill="url(#ground)"/>
+  <!-- soft reflection sheen on ground -->
+  <ellipse cx="960" cy="930" rx="780" ry="120" fill="#000" opacity="0.06"/>
+
+  <!-- elegant executive sedan silhouette -->
+  <g transform="translate(560,556)">
+    <!-- shadow -->
+    <ellipse cx="400" cy="372" rx="430" ry="34" fill="#000" opacity="0.18"/>
+    <!-- lower body -->
+    <path d="M14 250
+             C10 214 36 196 96 190
+             C150 152 250 132 400 130
+             C560 128 680 150 742 196
+             C806 200 856 218 872 250
+             L876 318
+             C876 332 864 342 848 342
+             L40 342
+             C24 342 12 332 12 318 Z" fill="url(#body)"/>
+    <!-- greenhouse / roofline -->
+    <path d="M214 188
+             C262 150 330 134 430 134
+             C548 134 632 156 690 196
+             C700 202 696 210 684 210
+             L236 210
+             C220 210 206 200 214 188 Z" fill="#1b1a16"/>
+    <!-- windows -->
+    <path d="M258 196 C300 166 360 154 430 154 C420 154 372 156 330 200 Z" fill="url(#glass)" opacity="0.9"/>
+    <path d="M452 154 C540 156 612 174 660 200 L470 200 Z" fill="url(#glass)" opacity="0.9"/>
+    <!-- belt-line chrome accent -->
+    <rect x="40" y="246" width="824" height="3" rx="1.5" fill="#b9a06a" opacity="0.55"/>
+    <!-- door seam -->
+    <line x1="438" y1="214" x2="438" y2="334" stroke="#000" stroke-width="2" opacity="0.25"/>
   </g>
-  <!-- palm trees -->
-  <g stroke="#6a8f4e" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.9">
-    <path d="M1330 720 C1335 600 1345 520 1352 470"/>
-  </g>
-  <g fill="#5f8a45" opacity="0.92">
-    <path d="M1352 470 C1290 440 1235 452 1205 486 C1258 472 1310 482 1352 504 Z"/>
-    <path d="M1352 470 C1414 440 1469 452 1499 486 C1446 472 1394 482 1352 504 Z"/>
-    <path d="M1352 470 C1326 415 1331 360 1357 330 C1350 384 1356 438 1366 492 Z"/>
-  </g>
-  <!-- green roadside -->
-  <path d="M0 720 L1920 690 L1920 770 L0 800 Z" fill="#9bbf6e" opacity="0.55"/>
-  <!-- road -->
-  <path d="M0 800 L1920 770 L1920 1080 L0 1080 Z" fill="url(#road)"/>
-  <g stroke="#f4e3a8" stroke-width="8" opacity="0.7" stroke-dasharray="40 46">
-    <line x1="60" y1="940" x2="1880" y2="900"/>
-  </g>
-  <!-- silver sedan -->
-  <g transform="translate(640,560)">
-    <path d="M40 150 C60 88 140 68 300 66 C420 64 520 88 560 108 C600 93 660 94 680 110 C722 114 762 128 772 160 L772 200 L20 200 L20 165 Z" fill="#e9edf1"/>
-    <path d="M180 76 C220 48 480 48 520 78 L560 108 L150 110 Z" fill="#bcd2e2"/>
-    <path d="M40 150 C60 120 740 120 772 160 L772 200 L20 200 Z" fill="#cdd6de"/>
-    <rect x="20" y="188" width="752" height="14" rx="6" fill="#9aa4ad"/>
-  </g>
-  <ellipse cx="760" cy="765" rx="50" ry="48" fill="#2b2b30"/>
-  <ellipse cx="1240" cy="755" rx="52" ry="50" fill="#2b2b30"/>
-  <circle cx="760" cy="765" r="22" fill="#c7ccd2"/>
-  <circle cx="1240" cy="755" r="22" fill="#c7ccd2"/>
-  <!-- warm headlight -->
-  <circle cx="1300" cy="690" r="14" fill="#fff4cf"/>
+
+  <!-- wheels -->
+  <circle cx="688" cy="900" r="58" fill="#14130f"/>
+  <circle cx="688" cy="900" r="26" fill="#3a3833"/>
+  <circle cx="688" cy="900" r="11" fill="#b9a06a" opacity="0.7"/>
+  <circle cx="1218" cy="900" r="58" fill="#14130f"/>
+  <circle cx="1218" cy="900" r="26" fill="#3a3833"/>
+  <circle cx="1218" cy="900" r="11" fill="#b9a06a" opacity="0.7"/>
+
+  <!-- warm headlight glow -->
+  <circle cx="1300" cy="804" r="10" fill="#fff3d2"/>
+  <ellipse cx="1340" cy="806" rx="120" ry="22" fill="#fbeebf" opacity="0.28"/>
 </svg>

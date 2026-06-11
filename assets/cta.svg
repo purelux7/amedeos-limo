@@ -1,35 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="900" viewBox="0 0 1920 900" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#7ec6f2"/>
-      <stop offset="0.6" stop-color="#c7e6fa"/>
-      <stop offset="1" stop-color="#fdf8ec"/>
+    <linearGradient id="ctaSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ded2bb"/>
+      <stop offset="0.6" stop-color="#ece3d2"/>
+      <stop offset="1" stop-color="#f4efe4"/>
     </linearGradient>
-    <radialGradient id="sun2" cx="0.5" cy="0.22" r="0.5">
-      <stop offset="0" stop-color="#fff3cf" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#fff3cf" stop-opacity="0"/>
+    <radialGradient id="ctaHaze" cx="0.5" cy="0.28" r="0.6">
+      <stop offset="0" stop-color="#fbf3df" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#fbf3df" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="ctaRoad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9c0ad"/>
+      <stop offset="1" stop-color="#b3aa97"/>
+    </linearGradient>
   </defs>
-  <rect width="1920" height="900" fill="url(#sky2)"/>
-  <rect width="1920" height="900" fill="url(#sun2)"/>
-  <!-- palms -->
-  <g stroke="#6a8f4e" stroke-width="14" fill="none" opacity="0.92" stroke-linecap="round">
-    <path d="M250 900 C250 700 240 560 235 470"/>
-    <path d="M1690 900 C1690 700 1700 560 1705 470"/>
-  </g>
-  <g fill="#5f8a45" opacity="0.92">
-    <path d="M235 470 C175 438 122 450 92 484 C146 470 200 480 235 502 Z"/>
-    <path d="M235 470 C295 438 348 450 378 484 C324 470 270 480 235 502 Z"/>
-    <path d="M235 470 C209 415 214 360 240 330 C233 384 239 438 249 492 Z"/>
-    <path d="M1705 470 C1645 438 1592 450 1562 484 C1616 470 1670 480 1705 502 Z"/>
-    <path d="M1705 470 C1765 438 1818 450 1848 484 C1794 470 1740 480 1705 502 Z"/>
-    <path d="M1705 470 C1679 415 1684 360 1710 330 C1703 384 1709 438 1719 492 Z"/>
-  </g>
-  <!-- grass -->
-  <rect x="0" y="640" width="1920" height="260" fill="#9bbf6e" opacity="0.5"/>
-  <!-- road -->
-  <path d="M840 600 L1080 600 L1320 900 L600 900 Z" fill="#bdb3a2"/>
-  <g stroke="#f4e3a8" stroke-width="8" opacity="0.8" stroke-dasharray="30 34">
-    <line x1="960" y1="600" x2="960" y2="900"/>
-  </g>
+  <rect width="1920" height="900" fill="url(#ctaSky)"/>
+  <rect width="1920" height="900" fill="url(#ctaHaze)"/>
+  <!-- distant soft treeline -->
+  <rect x="0" y="556" width="1920" height="40" fill="#cbc2ae" opacity="0.5"/>
+  <!-- ground -->
+  <rect x="0" y="592" width="1920" height="308" fill="#c3baa6"/>
+  <!-- road perspective -->
+  <path d="M860 592 L1060 592 L1320 900 L600 900 Z" fill="url(#ctaRoad)"/>
+  <path d="M958 592 L962 592 L975 900 L945 900 Z" fill="#e7dcc4" opacity="0.6"/>
 </svg>

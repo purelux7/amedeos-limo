@@ -1,26 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e9f3fb"/>
-      <stop offset="1" stop-color="#d7e9f5"/>
-    </linearGradient>
-    <radialGradient id="vig" cx="0.5" cy="0.36" r="0.75">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#d7e9f5"/>
+    <radialGradient id="studio" cx="0.5" cy="0.34" r="0.85">
+      <stop offset="0" stop-color="#e7e1d4"/>
+      <stop offset="0.6" stop-color="#d8d1c2"/>
+      <stop offset="1" stop-color="#c4bcaa"/>
     </radialGradient>
+    <linearGradient id="suit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2a26"/>
+      <stop offset="1" stop-color="#1a1814"/>
+    </linearGradient>
+    <linearGradient id="figure" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b6ad9b"/>
+      <stop offset="1" stop-color="#9c9281"/>
+    </linearGradient>
   </defs>
-  <rect width="800" height="1000" fill="url(#bg)"/>
-  <rect width="800" height="1000" fill="url(#vig)"/>
+
+  <rect width="800" height="1000" fill="url(#studio)"/>
+
+  <!-- soft floor shadow -->
+  <ellipse cx="400" cy="990" rx="260" ry="40" fill="#000" opacity="0.06"/>
+
   <!-- shoulders / suit -->
-  <path d="M150 1000 C170 760 280 700 400 700 C520 700 630 760 650 1000 Z" fill="#243a52"/>
-  <path d="M360 720 L400 820 L440 720 Z" fill="#ffffff"/>
-  <path d="M392 720 L400 1000 L408 720 Z" fill="#d3a23d"/>
-  <!-- collar -->
-  <path d="M330 705 L400 760 L400 720 Z" fill="#2c4865"/>
-  <path d="M470 705 L400 760 L400 720 Z" fill="#2c4865"/>
+  <path d="M150 1000 C166 768 286 706 400 706 C514 706 634 768 650 1000 Z" fill="url(#suit)"/>
+  <!-- shirt + tie -->
+  <path d="M362 726 L400 812 L438 726 Z" fill="#e9e3d6"/>
+  <path d="M392 726 L400 1000 L408 726 Z" fill="#9c8347"/>
+  <!-- lapels -->
+  <path d="M362 726 L400 760 L372 838 Z" fill="#211f1b"/>
+  <path d="M438 726 L400 760 L428 838 Z" fill="#211f1b"/>
+
+  <!-- neck -->
+  <path d="M368 660 C368 712 432 712 432 660 L432 700 L368 700 Z" fill="url(#figure)"/>
   <!-- head -->
-  <ellipse cx="400" cy="470" rx="120" ry="145" fill="#e9c9a8"/>
-  <path d="M286 408 C298 318 502 318 514 408 C524 470 502 356 400 356 C298 356 276 470 286 408 Z" fill="#6b4a32"/>
-  <!-- soft smile hint -->
-  <path d="M360 520 Q400 552 440 520" stroke="#c08a63" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <ellipse cx="400" cy="492" rx="116" ry="140" fill="url(#figure)"/>
+  <!-- hair, refined -->
+  <path d="M288 470 C292 372 508 372 512 470 C512 408 470 352 400 352 C330 352 288 408 288 470 Z" fill="#736853"/>
 </svg>
