@@ -3,25 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <title>Amedeo's Limo Service — Ride in Luxury and Style | Stuart, FL</title>
-  <meta name="description" content="Private luxury car service and personal concierge driver in Stuart, Florida. Airport transfers for PBI, FLL, and MIA, scheduled commutes, and full day chauffeur hire across the Treasure Coast, Palm Beach, and Broward." />
+  <meta name="theme-color" content="#0e2340" />
+  <title>Amedeo's Limo Service — Private Luxury Car Service | Stuart, FL</title>
+  <meta name="description" content="Private luxury car service and personal concierge chauffeur in Stuart, Florida. Airport transfers for PBI, FLL, and MIA, scheduled commutes, and full day chauffeur hire across the Treasure Coast, Palm Beach, and Broward." />
 
-  <!-- Open Graph -->
   <meta property="og:title" content="Amedeo's Limo Service — Ride in Luxury and Style" />
   <meta property="og:description" content="Your personal concierge driver across South Florida. Airport transfers, scheduled commutes, and full day chauffeur service." />
   <meta property="og:type" content="website" />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- ============ STICKY HEADER ============ -->
+  <!-- ============ HEADER ============ -->
   <header class="site-header" id="siteHeader">
     <div class="container header-inner">
       <a href="#hero" class="brand" aria-label="Amedeo's Limo Service home">
@@ -31,6 +29,7 @@
 
       <nav class="main-nav" id="mainNav" aria-label="Primary">
         <a href="#services">Services</a>
+        <a href="#fleet">Fleet</a>
         <a href="#airports">Airports</a>
         <a href="#about">About</a>
         <a href="#contact">Contact</a>
@@ -41,7 +40,7 @@
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
           <span>848-667-0999</span>
         </a>
-        <a href="#reserve" class="btn btn-gold header-reserve">Reserve</a>
+        <a href="#reserve" class="btn btn-gold header-reserve">Reserve Now</a>
         <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
           <span></span><span></span><span></span>
         </button>
@@ -49,10 +48,10 @@
     </div>
   </header>
 
-  <!-- Mobile menu -->
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
     <nav aria-label="Mobile">
       <a href="#services">Services</a>
+      <a href="#fleet">Fleet</a>
       <a href="#airports">Airports</a>
       <a href="#about">About</a>
       <a href="#contact">Contact</a>
@@ -64,29 +63,100 @@
   <main>
     <!-- ============ HERO ============ -->
     <section class="hero" id="hero">
-      <div class="hero-bg" style="background-image:url('assets/hero.svg');" role="img" aria-label="Black luxury sedan on a South Florida road at night"></div>
+      <div class="hero-bg" style="background-image:url('assets/hero.svg');" role="img" aria-label="Black executive sedan on a South Florida road at dusk"></div>
       <div class="hero-overlay"></div>
       <div class="container hero-content fade-in">
-        <p class="eyebrow">Private Car &amp; Concierge Chauffeur · Stuart, Florida</p>
-        <h1>Ride in Luxury<br />and Style</h1>
-        <p class="hero-sub">Private airport transfers and personal concierge driving across South Florida. One trusted driver, available whenever you need him.</p>
+        <p class="eyebrow eyebrow-light">Private Car &amp; Concierge Chauffeur · Stuart, Florida</p>
+        <h1>Private Luxury Car Service<br />Across South Florida</h1>
+        <p class="hero-sub">One trusted driver for your airport transfers, daily commutes, and full days on call — discreet, on time, and always at your service. Ride in luxury and style.</p>
         <div class="hero-buttons">
-          <a href="#reserve" class="btn btn-gold">Get a Quote</a>
-          <a href="tel:+18486670999" class="btn btn-outline">Call 848-667-0999</a>
+          <a href="#reserve" class="btn btn-gold">Request a Free Quote</a>
+          <a href="tel:+18486670999" class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
+            848-667-0999
+          </a>
+        </div>
+        <div class="hero-rating">
+          <span class="stars" aria-hidden="true">★★★★★</span>
+          <span>Five-star service trusted by South Florida travelers</span>
         </div>
       </div>
-      <a href="#reserve" class="scroll-cue" aria-label="Scroll to reservation form">
-        <span></span>
-      </a>
+    </section>
+
+    <!-- ============ TRUST STRIP ============ -->
+    <section class="trust" aria-label="Why clients choose us">
+      <div class="container trust-grid">
+        <div class="trust-item">
+          <strong>24/7</strong>
+          <span>Available day or night</span>
+        </div>
+        <div class="trust-item">
+          <strong>On Time</strong>
+          <span>Reliable, every ride</span>
+        </div>
+        <div class="trust-item">
+          <strong>Flat Rates</strong>
+          <span>Quoted up front, no surprises</span>
+        </div>
+        <div class="trust-item">
+          <strong>Live Tracking</strong>
+          <span>Flights monitored in real time</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURE CARDS ============ -->
+    <section class="features">
+      <div class="container">
+        <div class="section-head fade-in">
+          <p class="eyebrow">Why Amedeo's</p>
+          <h2>A Higher Standard of Service</h2>
+          <p class="section-intro">Not a rideshare app and not a call center — one professional chauffeur who knows your name, your schedule, and exactly how you like to travel.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card fade-in">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 9.2 8.6 2 9.2l5.5 4.6L5.8 21 12 17.3 18.2 21l-1.7-7.2L22 9.2l-7.2-.6z"/></svg>
+            </div>
+            <h3>Top-Rated Service</h3>
+            <p>A reputation built on showing up early, driving clean, and treating every client like a VIP.</p>
+          </article>
+          <article class="feature-card fade-in">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 10.5-3.5 2.1-.8-1.3 2.8-1.7V6h1.5z"/></svg>
+            </div>
+            <h3>24/7 Availability</h3>
+            <p>Early flights, late nights, last-minute changes — call directly and it's handled, any hour.</p>
+          </article>
+          <article class="feature-card fade-in">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5z"/></svg>
+            </div>
+            <h3>Professional Chauffeur</h3>
+            <p>Discreet, courteous, and private. The same trusted face behind the wheel every time.</p>
+          </article>
+          <article class="feature-card fade-in">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h.5a1.5 1.5 0 0 1 1.5 1.5V18a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5.5A1.5 1.5 0 0 1 4.5 11zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4zm11 0a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"/></svg>
+            </div>
+            <h3>Luxury Vehicle</h3>
+            <p>A clean, comfortable, late-model luxury sedan — immaculate inside and out, every trip.</p>
+          </article>
+        </div>
+      </div>
     </section>
 
     <!-- ============ BOOKING / QUOTE FORM ============ -->
     <section class="reserve" id="reserve">
-      <div class="container">
-        <div class="section-head fade-in">
+      <div class="container reserve-layout">
+        <div class="reserve-intro fade-in">
           <p class="eyebrow">Reservations</p>
-          <h2>Reserve Your Ride</h2>
-          <p class="section-intro">Tell us where you're headed and we'll confirm the details and your flat rate. No surprises, no apps — just your driver.</p>
+          <h2>Request Your Ride</h2>
+          <p>Send your trip details and Matt will personally confirm the schedule and your flat rate — usually within the hour.</p>
+          <div class="reserve-call">
+            <span>Prefer to talk it through?</span>
+            <a href="tel:+18486670999">Call 848-667-0999</a>
+          </div>
         </div>
 
         <div class="reserve-card fade-in">
@@ -143,7 +213,7 @@
                 <input type="tel" id="phone" name="phone" autocomplete="tel" required />
                 <span class="error" data-for="phone"></span>
               </div>
-              <div class="field">
+              <div class="field field-full">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" autocomplete="email" required />
                 <span class="error" data-for="email"></span>
@@ -164,6 +234,88 @@
             <p>Thank you — your request is in. Matt will personally confirm your ride and flat rate shortly. Need it sooner? <a href="tel:+18486670999">Call 848-667-0999</a>.</p>
             <button type="button" class="btn btn-outline" id="newRequest">Make another request</button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SERVICES ============ -->
+    <section class="services" id="services">
+      <div class="container">
+        <div class="section-head fade-in">
+          <p class="eyebrow">What We Offer</p>
+          <h2>Concierge Driving, Handled</h2>
+        </div>
+
+        <div class="service-grid">
+          <article class="service-card fade-in">
+            <div class="service-num">01</div>
+            <h3>Airport Transfers</h3>
+            <p>Door to terminal and terminal to door for PBI, FLL, and MIA on request. Flight tracking and a personal meet and greet.</p>
+          </article>
+          <article class="service-card fade-in">
+            <div class="service-num">02</div>
+            <h3>Scheduled Commutes</h3>
+            <p>Recurring, reliable rides to and from work on your schedule — the same trusted driver every time.</p>
+          </article>
+          <article class="service-card fade-in">
+            <div class="service-num">03</div>
+            <h3>Full Day Chauffeur</h3>
+            <p>Your personal driver for the entire day — meetings, errands, appointments, whatever the day calls for.</p>
+          </article>
+          <article class="service-card fade-in">
+            <div class="service-num">04</div>
+            <h3>Special Events &amp; Nights Out</h3>
+            <p>Arrive in style and never worry about parking or the drive home. Dinners, galas, and celebrations covered.</p>
+          </article>
+          <article class="service-card fade-in">
+            <div class="service-num">05</div>
+            <h3>Point to Point &amp; Long Distance</h3>
+            <p>Comfortable, private transportation anywhere across South Florida — short hops or long hauls.</p>
+          </article>
+          <article class="service-card service-card--cta fade-in">
+            <h3>Something else in mind?</h3>
+            <p>If you need to get somewhere in comfort, just ask. Custom trips are always welcome.</p>
+            <a href="#reserve" class="link-arrow">Request a quote →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FLEET / VEHICLE ============ -->
+    <section class="fleet" id="fleet">
+      <div class="container">
+        <div class="section-head fade-in">
+          <p class="eyebrow">The Vehicle</p>
+          <h2>Travel in Comfort</h2>
+          <p class="section-intro">A meticulously maintained luxury vehicle — leather seating, climate control, bottled water, and a spotless cabin on every ride.</p>
+        </div>
+
+        <div class="fleet-grid">
+          <article class="fleet-card fade-in">
+            <div class="fleet-img" style="background-image:url('assets/vehicle-sedan.svg');" role="img" aria-label="Black executive luxury sedan"></div>
+            <div class="fleet-body">
+              <span class="fleet-kicker">Signature</span>
+              <h3>Executive Sedan</h3>
+              <p>The everyday standard — a refined black luxury sedan for airport runs, commutes, and point-to-point trips in total comfort.</p>
+              <div class="fleet-specs">
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5z"/></svg>Up to 3 passengers</span>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 4h6a2 2 0 0 1 2 2h1a3 3 0 0 1 3 3v9a2 2 0 0 1-2 2h-1v1h-2v-1H8v1H6v-1H5a2 2 0 0 1-2-2V9a3 3 0 0 1 3-3h1a2 2 0 0 1 2-2zm0 2v0h6a0 0 0 0 0 0 0zm-1 2H6v10h12V8z"/></svg>Up to 3 bags</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="fleet-card fade-in">
+            <div class="fleet-img" style="background-image:url('assets/vehicle-suv.svg');" role="img" aria-label="Black executive luxury SUV"></div>
+            <div class="fleet-body">
+              <span class="fleet-kicker">On Request</span>
+              <h3>Executive SUV</h3>
+              <p>Need more room for the group or the luggage? A full-size luxury SUV is available upon request for larger parties and longer trips.</p>
+              <div class="fleet-specs">
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5z"/></svg>Up to 6 passengers</span>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 4h6a2 2 0 0 1 2 2h1a3 3 0 0 1 3 3v9a2 2 0 0 1-2 2h-1v1h-2v-1H8v1H6v-1H5a2 2 0 0 1-2-2V9a3 3 0 0 1 3-3h1a2 2 0 0 1 2-2zm-1 4H6v10h12V8z"/></svg>Up to 5 bags</span>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -197,74 +349,6 @@
       </div>
     </section>
 
-    <!-- ============ SERVICES ============ -->
-    <section class="services" id="services">
-      <div class="container">
-        <div class="section-head fade-in">
-          <p class="eyebrow">What We Offer</p>
-          <h2>Concierge Driving, Handled</h2>
-        </div>
-
-        <div class="service-grid">
-          <article class="service-card fade-in">
-            <div class="service-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/></svg>
-            </div>
-            <h3>Airport Transfers</h3>
-            <p>Door to terminal and terminal to door for PBI, FLL, and MIA on request. Flight tracking and a personal meet and greet.</p>
-          </article>
-          <article class="service-card fade-in">
-            <div class="service-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 10.5-3.5 2.1-.8-1.3 2.8-1.7V6h1.5z"/></svg>
-            </div>
-            <h3>Scheduled Commutes</h3>
-            <p>Recurring, reliable rides to and from work on your schedule — the same trusted driver every time.</p>
-          </article>
-          <article class="service-card fade-in">
-            <div class="service-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5z"/></svg>
-            </div>
-            <h3>Full Day Chauffeur</h3>
-            <p>Your personal driver for the entire day — meetings, errands, appointments, whatever the day calls for.</p>
-          </article>
-          <article class="service-card fade-in">
-            <div class="service-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 9.2 8.6 2 9.2l5.5 4.6L5.8 21 12 17.3 18.2 21l-1.7-7.2L22 9.2l-7.2-.6z"/></svg>
-            </div>
-            <h3>Special Events &amp; Nights Out</h3>
-            <p>Arrive in style and never worry about parking or the drive home. Dinners, galas, and celebrations covered.</p>
-          </article>
-          <article class="service-card fade-in">
-            <div class="service-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/></svg>
-            </div>
-            <h3>Point to Point &amp; Long Distance</h3>
-            <p>Comfortable, private transportation anywhere across South Florida — short hops or long hauls.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ WHY CHOOSE ============ -->
-    <section class="why">
-      <div class="container">
-        <div class="section-head fade-in">
-          <p class="eyebrow">The Difference</p>
-          <h2>Why Choose Amedeo's</h2>
-        </div>
-        <ul class="why-list">
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>One dedicated personal driver — not a rotating fleet of strangers.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Available 24 hours, day or night.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Always reliable and on time.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Discreet, professional, and private.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Live flight tracking on every airport run.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Clean, comfortable luxury vehicle.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>All major credit cards accepted — Visa, Mastercard, American Express.</li>
-          <li class="fade-in"><span class="check" aria-hidden="true"></span>Fair, reasonable flat rates with no surprises.</li>
-        </ul>
-      </div>
-    </section>
-
     <!-- ============ ABOUT ============ -->
     <section class="about" id="about">
       <div class="container about-inner">
@@ -281,7 +365,34 @@
           <p>Amedeo's Limo Service is built around one simple idea: you deserve a driver you can actually trust. Matt Gaglioti is the owner and your personal chauffeur — not a faceless call center or an app.</p>
           <p>Based in Stuart, Matt has built his reputation on showing up early, driving clean, and treating every client like a VIP. Whether it's a 5 a.m. run to catch a flight at PBI, a standing ride to the office, or a full day at your service, you get the same trusted face every time.</p>
           <p>Call him directly, build a relationship, and ride knowing it's handled.</p>
-          <a href="tel:+18486670999" class="btn btn-gold">Call Matt — 848-667-0999</a>
+          <a href="tel:+18486670999" class="btn btn-navy">Call Matt — 848-667-0999</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TESTIMONIALS ============ -->
+    <section class="testimonials">
+      <div class="container">
+        <div class="section-head fade-in">
+          <p class="eyebrow">Client Reviews</p>
+          <h2>Trusted by Frequent Flyers</h2>
+        </div>
+        <div class="testimonial-grid">
+          <figure class="testimonial-card fade-in">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Matt is the only driver I call. Always early, always professional."</blockquote>
+            <figcaption>J. Reyes · West Palm Beach</figcaption>
+          </figure>
+          <figure class="testimonial-card fade-in">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Made my airport trips completely stress free. Worth every penny."</blockquote>
+            <figcaption>D. Caldwell · Stuart</figcaption>
+          </figure>
+          <figure class="testimonial-card fade-in">
+            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+            <blockquote>"Booked him for a full day of meetings and he handled everything perfectly."</blockquote>
+            <figcaption>M. Okafor · Palm Beach Gardens</figcaption>
+          </figure>
         </div>
       </div>
     </section>
@@ -291,7 +402,7 @@
       <div class="container coverage-inner fade-in">
         <p class="eyebrow">Coverage Area</p>
         <h2>Based in Stuart, serving South Florida</h2>
-        <p>Based in Stuart, Florida, serving the Treasure Coast, Palm Beach, and Broward. Primary airport service to Palm Beach International (PBI) and Fort Lauderdale–Hollywood International (FLL), with Miami International (MIA) available upon request.</p>
+        <p>Serving the Treasure Coast, Palm Beach, and Broward. Primary airport service to Palm Beach International (PBI) and Fort Lauderdale–Hollywood International (FLL), with Miami International (MIA) available upon request.</p>
         <div class="coverage-tags">
           <span>Treasure Coast</span>
           <span>Palm Beach</span>
@@ -299,33 +410,6 @@
           <span>Stuart</span>
           <span>West Palm Beach</span>
           <span>Fort Lauderdale</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ TESTIMONIALS ============ -->
-    <section class="testimonials">
-      <div class="container">
-        <div class="section-head fade-in">
-          <p class="eyebrow">Clients</p>
-          <h2>Trusted by Frequent Flyers</h2>
-        </div>
-        <div class="testimonial-grid">
-          <figure class="testimonial-card fade-in">
-            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
-            <blockquote>"Matt is the only driver I call. Always early, always professional."</blockquote>
-            <figcaption>— J. Reyes, West Palm Beach</figcaption>
-          </figure>
-          <figure class="testimonial-card fade-in">
-            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
-            <blockquote>"Made my airport trips completely stress free. Worth every penny."</blockquote>
-            <figcaption>— D. Caldwell, Stuart</figcaption>
-          </figure>
-          <figure class="testimonial-card fade-in">
-            <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
-            <blockquote>"Booked him for a full day of meetings and he handled everything perfectly."</blockquote>
-            <figcaption>— M. Okafor, Palm Beach Gardens</figcaption>
-          </figure>
         </div>
       </div>
     </section>
@@ -368,15 +452,13 @@
 
     <!-- ============ FINAL CTA ============ -->
     <section class="cta-band" id="contact">
-      <div class="cta-bg" style="background-image:url('assets/cta.svg');" role="img" aria-label="Luxury sedan headlights on a palm-lined Florida road at dusk"></div>
-      <div class="cta-overlay"></div>
       <div class="container cta-content fade-in">
-        <p class="eyebrow">Reservations Open 24/7</p>
+        <p class="eyebrow eyebrow-light">Reservations Open 24/7</p>
         <h2>Ready to Ride in Luxury and Style</h2>
         <p>One call, one trusted driver, and the whole trip handled.</p>
         <div class="cta-buttons">
           <a href="#reserve" class="btn btn-gold">Reserve Your Ride</a>
-          <a href="tel:+18486670999" class="btn btn-outline btn-call-big">
+          <a href="tel:+18486670999" class="btn btn-ghost btn-call-big">
             <span class="call-label">Call Now</span>
             <span class="call-number">848-667-0999</span>
           </a>
@@ -398,12 +480,12 @@
       </div>
 
       <div class="footer-col">
-        <h4>Quick Links</h4>
+        <h4>Explore</h4>
         <a href="#services">Services</a>
+        <a href="#fleet">Fleet</a>
         <a href="#airports">Airports</a>
         <a href="#about">About</a>
         <a href="#reserve">Reserve</a>
-        <a href="#contact">Contact</a>
       </div>
 
       <div class="footer-col">
@@ -420,10 +502,9 @@
     </div>
   </footer>
 
-  <!-- Sticky mobile call button -->
   <a href="tel:+18486670999" class="sticky-call" aria-label="Call Amedeo's Limo Service now">
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
-    <span>Call Now</span>
+    <span>Call Now — 848-667-0999</span>
   </a>
 
   <script src="script.js"></script>

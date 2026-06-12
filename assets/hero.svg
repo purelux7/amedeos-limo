@@ -1,79 +1,90 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#d9cdb6"/>
-      <stop offset="0.45" stop-color="#e7ddca"/>
-      <stop offset="0.78" stop-color="#efe7d7"/>
-      <stop offset="1" stop-color="#f4efe4"/>
+      <stop offset="0" stop-color="#0a1b33"/>
+      <stop offset="0.5" stop-color="#102744"/>
+      <stop offset="1" stop-color="#0b1d36"/>
     </linearGradient>
-    <radialGradient id="haze" cx="0.66" cy="0.34" r="0.55">
-      <stop offset="0" stop-color="#fbf3df" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#fbf3df" stop-opacity="0"/>
+    <radialGradient id="glow" cx="0.72" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#c4a253" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#c4a253" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#cfc6b4"/>
-      <stop offset="1" stop-color="#bdb4a1"/>
+      <stop offset="0" stop-color="#0c1f3a"/>
+      <stop offset="1" stop-color="#060f1f"/>
     </linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3b3a37"/>
-      <stop offset="0.5" stop-color="#26241f"/>
-      <stop offset="1" stop-color="#16140f"/>
-    </linearGradient>
-    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#6f6c63"/>
-      <stop offset="1" stop-color="#4a473f"/>
+      <stop offset="0" stop-color="#1a2c46"/>
+      <stop offset="0.5" stop-color="#0d1b30"/>
+      <stop offset="1" stop-color="#05070d"/>
     </linearGradient>
   </defs>
 
   <rect width="1920" height="1080" fill="url(#sky)"/>
-  <rect width="1920" height="1080" fill="url(#haze)"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
 
-  <!-- faint horizon treeline, very soft -->
-  <rect x="0" y="690" width="1920" height="60" fill="#cdc4b0" opacity="0.45"/>
-  <!-- ground plane -->
-  <rect x="0" y="744" width="1920" height="336" fill="url(#ground)"/>
-  <!-- soft reflection sheen on ground -->
-  <ellipse cx="960" cy="930" rx="780" ry="120" fill="#000" opacity="0.06"/>
+  <!-- distant skyline -->
+  <g fill="#0a1830" opacity="0.85">
+    <rect x="60"  y="430" width="64"  height="230"/>
+    <rect x="150" y="380" width="50"  height="280"/>
+    <rect x="220" y="460" width="74"  height="200"/>
+    <rect x="316" y="340" width="56"  height="320"/>
+    <rect x="388" y="420" width="84"  height="240"/>
+    <rect x="1470" y="400" width="64" height="260"/>
+    <rect x="1552" y="350" width="54" height="310"/>
+    <rect x="1624" y="450" width="80" height="210"/>
+    <rect x="1720" y="390" width="52" height="270"/>
+  </g>
+  <g fill="#c4a253" opacity="0.55">
+    <rect x="330" y="360" width="5" height="7"/><rect x="348" y="392" width="5" height="7"/>
+    <rect x="170" y="410" width="5" height="7"/><rect x="1566" y="378" width="5" height="7"/>
+    <rect x="1736" y="412" width="5" height="7"/><rect x="80" y="470" width="5" height="7"/>
+    <rect x="404" y="448" width="5" height="7"/><rect x="1644" y="478" width="5" height="7"/>
+  </g>
 
-  <!-- elegant executive sedan silhouette -->
-  <g transform="translate(560,556)">
-    <!-- shadow -->
-    <ellipse cx="400" cy="372" rx="430" ry="34" fill="#000" opacity="0.18"/>
-    <!-- lower body -->
-    <path d="M14 250
-             C10 214 36 196 96 190
-             C150 152 250 132 400 130
-             C560 128 680 150 742 196
-             C806 200 856 218 872 250
-             L876 318
-             C876 332 864 342 848 342
-             L40 342
-             C24 342 12 332 12 318 Z" fill="url(#body)"/>
-    <!-- greenhouse / roofline -->
-    <path d="M214 188
-             C262 150 330 134 430 134
-             C548 134 632 156 690 196
-             C700 202 696 210 684 210
-             L236 210
-             C220 210 206 200 214 188 Z" fill="#1b1a16"/>
-    <!-- windows -->
-    <path d="M258 196 C300 166 360 154 430 154 C420 154 372 156 330 200 Z" fill="url(#glass)" opacity="0.9"/>
-    <path d="M452 154 C540 156 612 174 660 200 L470 200 Z" fill="url(#glass)" opacity="0.9"/>
-    <!-- belt-line chrome accent -->
-    <rect x="40" y="246" width="824" height="3" rx="1.5" fill="#b9a06a" opacity="0.55"/>
+  <!-- ground -->
+  <rect x="0" y="730" width="1920" height="350" fill="url(#ground)"/>
+  <ellipse cx="1100" cy="980" rx="900" ry="120" fill="#c4a253" opacity="0.05"/>
+
+  <!-- executive sedan, three-quarter cinematic -->
+  <g transform="translate(720,556)">
+    <ellipse cx="420" cy="384" rx="470" ry="34" fill="#000" opacity="0.45"/>
+    <!-- body -->
+    <path d="M10 258
+             C6 220 34 200 98 194
+             C156 150 262 128 420 126
+             C588 124 716 148 782 196
+             C850 200 902 220 918 256
+             L922 326
+             C922 342 909 352 892 352
+             L36 352
+             C19 352 6 342 6 326 Z" fill="url(#body)"/>
+    <!-- roofline -->
+    <path d="M214 192
+             C266 150 338 132 444 132
+             C570 132 660 156 720 198
+             C731 205 726 214 713 214
+             L238 214
+             C221 214 206 203 214 192 Z" fill="#0a1525"/>
+    <!-- windows with subtle gold reflection -->
+    <path d="M262 200 C306 168 370 156 444 156 C432 156 382 158 338 204 Z" fill="#27405f" opacity="0.85"/>
+    <path d="M466 156 C560 158 636 178 686 204 L486 204 Z" fill="#27405f" opacity="0.85"/>
+    <!-- chrome belt -->
+    <rect x="40" y="252" width="884" height="3" rx="1.5" fill="#c4a253" opacity="0.6"/>
     <!-- door seam -->
-    <line x1="438" y1="214" x2="438" y2="334" stroke="#000" stroke-width="2" opacity="0.25"/>
+    <line x1="452" y1="218" x2="452" y2="344" stroke="#000" stroke-width="2" opacity="0.35"/>
+    <!-- headlight -->
+    <ellipse cx="900" cy="288" rx="22" ry="12" fill="#fdf0c8"/>
   </g>
 
   <!-- wheels -->
-  <circle cx="688" cy="900" r="58" fill="#14130f"/>
-  <circle cx="688" cy="900" r="26" fill="#3a3833"/>
-  <circle cx="688" cy="900" r="11" fill="#b9a06a" opacity="0.7"/>
-  <circle cx="1218" cy="900" r="58" fill="#14130f"/>
-  <circle cx="1218" cy="900" r="26" fill="#3a3833"/>
-  <circle cx="1218" cy="900" r="11" fill="#b9a06a" opacity="0.7"/>
+  <circle cx="858" cy="900" r="60" fill="#03070e"/>
+  <circle cx="858" cy="900" r="27" fill="#1a2c46"/>
+  <circle cx="858" cy="900" r="11" fill="#c4a253" opacity="0.7"/>
+  <circle cx="1402" cy="900" r="60" fill="#03070e"/>
+  <circle cx="1402" cy="900" r="27" fill="#1a2c46"/>
+  <circle cx="1402" cy="900" r="11" fill="#c4a253" opacity="0.7"/>
 
-  <!-- warm headlight glow -->
-  <circle cx="1300" cy="804" r="10" fill="#fff3d2"/>
-  <ellipse cx="1340" cy="806" rx="120" ry="22" fill="#fbeebf" opacity="0.28"/>
+  <!-- headlight beam -->
+  <path d="M1630 836 L1920 800 L1920 900 L1640 884 Z" fill="#fdf0c8" opacity="0.10"/>
 </svg>
