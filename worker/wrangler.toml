@@ -7,4 +7,4 @@ workers_dev = true
 # RESEND_API_KEY is a SECRET — set with: wrangler secret put RESEND_API_KEY
 [vars]
 TO_EMAIL = "donny@pureluxbio.com"
-FROM_EMAIL = "Amadeo's Private Car Service <onboarding@resend.dev>"
+FROM_EMAIL = "Amadeo's Private Car Service <reservations@send.pureluxbio.com>"

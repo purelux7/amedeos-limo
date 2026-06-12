@@ -116,7 +116,7 @@
 
   // Reservation endpoint (Cloudflare Worker). Empty string = no backend yet,
   // in which case we just show the success state without sending.
-  var RESERVE_ENDPOINT = "";
+  var RESERVE_ENDPOINT = "https://afacs-reservations.donny-3e2.workers.dev";
 
   function showSuccess() {
     form.hidden = true;
