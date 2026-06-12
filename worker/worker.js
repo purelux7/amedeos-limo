@@ -84,7 +84,7 @@ export default {
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: env.FROM_EMAIL,
-        to: [env.TO_EMAIL],
+        to: String(env.TO_EMAIL).split(",").map((s) => s.trim()).filter(Boolean),
         reply_to: String(d.email),
         subject,
         html,

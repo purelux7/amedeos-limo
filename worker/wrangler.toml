@@ -6,5 +6,5 @@ workers_dev = true
 # Non-secret vars (set the real values at deploy time or in the dashboard).
 # RESEND_API_KEY is a SECRET — set with: wrangler secret put RESEND_API_KEY
 [vars]
-TO_EMAIL = "donny@pureluxbio.com"
+TO_EMAIL = "donny@pureluxbio.com, Gagliotimatt2@gmail.com"
 FROM_EMAIL = "Amadeo's Private Car Service <reservations@send.pureluxbio.com>"
