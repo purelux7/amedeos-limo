@@ -189,6 +189,7 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
 .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--gold); background: #fff; box-shadow: 0 0 0 3px var(--gold-soft); }
 .field select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4a253' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+.hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .field.invalid input, .field.invalid select, .field.invalid textarea { border-color: #d4564b; }
 .error { color: #c2483d; font-size: 0.76rem; margin-top: 5px; display: none; }
 .field.invalid .error { display: block; }

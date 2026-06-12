@@ -114,6 +114,16 @@
     });
   });
 
+  // Reservation endpoint (Cloudflare Worker). Empty string = no backend yet,
+  // in which case we just show the success state without sending.
+  var RESERVE_ENDPOINT = "";
+
+  function showSuccess() {
+    form.hidden = true;
+    success.hidden = false;
+    success.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     var fields = form.querySelectorAll("input, select, textarea");
@@ -132,10 +142,30 @@
       return;
     }
 
-    // No backend yet — show the success state.
-    form.hidden = true;
-    success.hidden = false;
-    success.scrollIntoView({ behavior: "smooth", block: "center" });
+    var submitBtn = form.querySelector('button[type="submit"]');
+
+    // No backend configured — just show success.
+    if (!RESERVE_ENDPOINT) { showSuccess(); return; }
+
+    var payload = {};
+    fields.forEach(function (field) { if (field.name) payload[field.name] = field.value; });
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending…"; }
+
+    fetch(RESERVE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("Request failed");
+        return res.json();
+      })
+      .then(function () { showSuccess(); })
+      .catch(function () {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Request Reservation"; }
+        alert("Sorry — something went wrong sending your request. Please call 848-667-0999 and we'll take care of you right away.");
+      });
   });
 
   if (newRequest) {
