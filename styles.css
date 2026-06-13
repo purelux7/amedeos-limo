@@ -131,7 +131,7 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 .hero { min-height: 100vh; display: flex; align-items: center; padding: 120px 0 90px; overflow: hidden; }
 .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-color: var(--navy-deep); transform: scale(1.06); animation: heroZoom 16s var(--ease) forwards; }
 @keyframes heroZoom { to { transform: scale(1); } }
-.hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,20,38,0.92) 0%, rgba(8,20,38,0.72) 48%, rgba(8,20,38,0.42) 100%), linear-gradient(0deg, rgba(8,20,38,0.7) 0%, rgba(8,20,38,0) 55%); }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(9,11,15,0.92) 0%, rgba(9,11,15,0.62) 46%, rgba(9,11,15,0.22) 78%, rgba(9,11,15,0.05) 100%), linear-gradient(0deg, rgba(9,11,15,0.6) 0%, rgba(9,11,15,0) 52%); }
 .hero-content { position: relative; max-width: 760px; }
 .hero h1 { color: #fff; margin-bottom: 24px; }
 .hero-sub { font-size: clamp(1.05rem, 1.8vw, 1.25rem); color: rgba(255,255,255,0.82); max-width: 580px; margin-bottom: 36px; }
@@ -308,8 +308,9 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 /* ============================================================
    CTA BAND
    ============================================================ */
-.cta-band { background: linear-gradient(120deg, var(--navy-deep), var(--navy-2)); text-align: center; position: relative; overflow: hidden; }
-.cta-band::before { content: ""; position: absolute; top: -40%; right: -10%; width: 480px; height: 480px; background: radial-gradient(circle, rgba(196,162,83,0.16), transparent 70%); }
+.cta-band { background: var(--navy-deep); text-align: center; position: relative; overflow: hidden; }
+.cta-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.cta-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(8,18,33,0.94) 0%, rgba(8,18,33,0.78) 55%, rgba(8,18,33,0.72) 100%); }
 .cta-content { position: relative; max-width: 700px; margin: 0 auto; }
 .cta-content h2 { color: #fff; margin: 6px 0 16px; }
 .cta-content > p { color: rgba(255,255,255,0.78); font-size: 1.12rem; margin-bottom: 36px; }
