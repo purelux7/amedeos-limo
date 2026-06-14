@@ -255,6 +255,10 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
    ABOUT
    ============================================================ */
 .about { background: var(--bg-soft); }
+.about-solo { max-width: 740px; margin: 0 auto; text-align: center; }
+.about-solo .about-copy h2 { margin-bottom: 22px; }
+.about-solo .about-copy p { color: var(--body); margin-bottom: 16px; font-size: 1.05rem; }
+.about-solo .about-copy .btn { margin-top: 18px; }
 .about-inner { display: grid; grid-template-columns: 0.82fr 1.18fr; gap: 60px; align-items: center; }
 .about-photo { position: relative; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
 .about-photo img { width: 100%; aspect-ratio: 4/5; object-fit: cover; }
