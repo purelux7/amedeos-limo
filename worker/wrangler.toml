@@ -3,8 +3,19 @@ main = "worker.js"
 compatibility_date = "2024-11-01"
 workers_dev = true
 
-# Non-secret vars (set the real values at deploy time or in the dashboard).
-# RESEND_API_KEY is a SECRET — set with: wrangler secret put RESEND_API_KEY
+# Non-secret vars (set real values here or in the dashboard).
+# Secrets are set with `wrangler secret put NAME`:
+#   RESEND_API_KEY   — Resend API key (email)
+#   MAPBOX_TOKEN     — Mapbox token (geocoding + map). A public/restricted token is fine.
+#   ADMIN_PASSWORD   — password for the /admin CRM dashboard (single user: Matt)
 [vars]
 TO_EMAIL = "donny@pureluxbio.com, Gagliotimatt2@gmail.com"
-FROM_EMAIL = "Amadeo's Private Car Service <reservations@send.pureluxbio.com>"
+FROM_EMAIL = "Amedeo's Private Car Service <reservations@send.pureluxbio.com>"
+
+# Cloudflare D1 database (the CRM store).
+# Create it once with:  wrangler d1 create afacs-crm
+# then paste the printed database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "afacs-crm"
+database_id = "cfe69598-1d6a-4c9e-bca8-30bc37f5b4a2"
