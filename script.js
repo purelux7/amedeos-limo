@@ -72,12 +72,14 @@
 
   function showError(field, message) {
     var wrap = field.closest(".field");
+    if (!wrap) return; // e.g. the hidden honeypot has no .field wrapper
     wrap.classList.add("invalid");
     var err = wrap.querySelector(".error");
     if (err) err.textContent = message;
   }
   function clearError(field) {
     var wrap = field.closest(".field");
+    if (!wrap) return; // e.g. the hidden honeypot has no .field wrapper
     wrap.classList.remove("invalid");
     var err = wrap.querySelector(".error");
     if (err) err.textContent = "";
@@ -107,10 +109,12 @@
   // Clear error as the user corrects a field
   form.querySelectorAll("input, select, textarea").forEach(function (field) {
     field.addEventListener("input", function () {
-      if (field.closest(".field").classList.contains("invalid")) validateField(field);
+      var w = field.closest(".field");
+      if (w && w.classList.contains("invalid")) validateField(field);
     });
     field.addEventListener("change", function () {
-      if (field.closest(".field").classList.contains("invalid")) validateField(field);
+      var w = field.closest(".field");
+      if (w && w.classList.contains("invalid")) validateField(field);
     });
   });
 
