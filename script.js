@@ -156,19 +156,39 @@
 
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending…"; }
 
+    // Never let the button hang on "Sending…" forever: abort a stalled
+    // request (e.g. flaky mobile connection) so the user can retry.
+    var controller = ("AbortController" in window) ? new AbortController() : null;
+    var timedOut = false;
+    var timer = setTimeout(function () {
+      timedOut = true;
+      if (controller) controller.abort();
+    }, 15000);
+
+    function resetButton() {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Request Reservation"; }
+    }
+
     fetch(RESERVE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller ? controller.signal : undefined,
     })
       .then(function (res) {
         if (!res.ok) throw new Error("Request failed");
         return res.json();
       })
-      .then(function () { showSuccess(); })
+      .then(function () { clearTimeout(timer); showSuccess(); })
       .catch(function () {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Request Reservation"; }
-        alert("Sorry — something went wrong sending your request. Please call 848-667-0999 and we'll take care of you right away.");
+        clearTimeout(timer);
+        resetButton();
+        alert(
+          (timedOut
+            ? "That took longer than expected and didn't go through. "
+            : "Sorry — something went wrong sending your request. ") +
+          "Please call 848-667-0999 and we'll take care of you right away."
+        );
       });
   });
 
