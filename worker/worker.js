@@ -218,6 +218,58 @@ async function handleReserve(request, env, cors) {
       // booking is already saved; report email failure but don't 500 the user hard
       return json({ ok: true, emailWarning: true, detail }, 200, cors);
     }
+
+    // ---- customer confirmation email (best-effort; never blocks the booking) ----
+    try {
+      const replyTo = String(env.TO_EMAIL).split(",").map((s) => s.trim()).filter(Boolean);
+      const custSubject = `We received your reservation request — Amedeo's Private Car Service`;
+      const custHtml = `
+    <div style="background:#f4f6f9;padding:28px">
+      <div style="max-width:560px;margin:auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e3e8ef">
+        <div style="background:#0e2340;padding:26px">
+          <div style="color:#fff;font:800 22px Arial,sans-serif">Thank you, ${esc((d.name || "").split(" ")[0]) || "there"}.</div>
+          <div style="color:#c4a253;font:600 12px Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;margin-top:6px">Amedeo's Private Car Service</div>
+        </div>
+        <div style="padding:24px 26px 6px;color:#1b2533;font:400 15px/1.6 Arial,sans-serif">
+          We've received your reservation request. Matt will personally review the details below and confirm your ride and flat rate shortly — usually within the hour.
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin:14px 0 4px">
+          ${row("Service", d.service)}${row("Pickup", d.pickup)}${row("Drop off", d.dropoff)}
+          ${row("Date", d.date)}${row("Time", d.time)}${row("Passengers", d.passengers)}${row("Notes", d.notes)}
+        </table>
+        <div style="padding:14px 26px 24px;color:#1b2533;font:400 15px/1.6 Arial,sans-serif">
+          Need it sooner or have a change? Call or text <a href="tel:+18486670999" style="color:#0e2340;font-weight:700;text-decoration:none">848-667-0999</a>.
+        </div>
+        <div style="padding:16px 26px;background:#f4f6f9;color:#7b8597;font:400 12px Arial,sans-serif">
+          This is a confirmation that your request was received — it is not yet a confirmed booking. Amedeo's Private Car Service · Stuart, Florida.
+        </div>
+      </div>
+    </div>`;
+      const custText =
+        `Thank you, ${(d.name || "").split(" ")[0] || "there"}.\n\n` +
+        `We've received your reservation request. Matt will personally confirm your ride and flat rate shortly — usually within the hour.\n\n` +
+        `Service:    ${d.service}\nPickup:     ${d.pickup}\nDrop off:   ${d.dropoff}\n` +
+        `Date:       ${d.date}\nTime:       ${d.time}\nPassengers: ${d.passengers}\nNotes:      ${d.notes || "—"}\n\n` +
+        `Need it sooner or have a change? Call or text 848-667-0999.\n\n` +
+        `This is a confirmation that your request was received — it is not yet a confirmed booking.\n` +
+        `Amedeo's Private Car Service · Stuart, Florida\n`;
+
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: env.FROM_EMAIL,
+          to: [String(d.email)],
+          reply_to: replyTo,
+          subject: custSubject,
+          html: custHtml,
+          text: custText,
+        }),
+      });
+    } catch (e) {
+      // never let the customer confirmation affect the booking result
+      console.log("Customer confirmation email failed:", e && e.message);
+    }
   }
   return json({ ok: true }, 200, cors);
 }
