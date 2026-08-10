@@ -41,6 +41,15 @@ OWNER_PHONE = ""
 # Charge sweep. Every 15 minutes: charge anything that has reached T-24h.
 # The window is generous on purpose — a booking made 20 hours out is
 # charged on the next tick rather than being missed entirely.
+# Serve the API from the site's own domain rather than *.workers.dev.
+# Ad blockers, Brave Shields, AdGuard and many corporate/ISP DNS filters
+# block workers.dev wholesale because phishing kits abuse it — a blocked
+# customer just sees "couldn't reach the booking system" and gives up,
+# and nothing reaches the Worker to tell us it happened.
+[[routes]]
+pattern = "api.allfloridaairportscarservice.com"
+custom_domain = true
+
 [triggers]
 # 0 12 * * * is the daily digest at 8am EDT / 7am EST. Its ARRIVAL is the
 # heartbeat: if that email stops showing up, the scheduled jobs have died.

@@ -82,7 +82,7 @@
     ? window.AFACS_API
     : (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
         ? location.protocol + "//" + location.hostname + ":8787"
-        : "https://afacs-reservations.donny-3e2.workers.dev");
+        : "https://api.allfloridaairportscarservice.com");
   var form = document.getElementById("reserveForm");
   var success = document.getElementById("formSuccess");
 
