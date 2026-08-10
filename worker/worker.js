@@ -18,16 +18,50 @@
      TO_EMAIL / FROM_EMAIL  vars — reservation email delivery
    ============================================================ */
 
+import {
+  handleConfig, handleQuote, handleDay, handleBook,
+  handleManageGet, handleManageCancel,
+  handleBlackouts, handleExtras, handleHealth,
+} from "./api.js";
+import { runScheduled, runDigest } from "./cron.js";
+import { DASHBOARD_HTML } from "./dashboard.js";
+import { loadSettings, localToUtc, blockWindow } from "./engine.js";
+
 const ALLOWED_ORIGINS = [
   "https://allfloridaairportscarservice.com",
   "https://www.allfloridaairportscarservice.com",
   "https://purelux7.github.io",
+  // Local development against `wrangler dev`. Harmless in production: CORS is
+  // a browser-side control only, so it was never what protects these
+  // endpoints — the public ones are public by design and the private ones sit
+  // behind the session cookie check below.
+  "http://localhost:8000",
+  "http://127.0.0.1:8000",
+  // Accept.js refuses to run on a non-HTTPS page (E_WC_02), so exercising the
+  // card step locally requires serving the site over TLS too.
+  "https://localhost:8443",
+  "https://127.0.0.1:8443",
 ];
 
 const STUART = "-80.2528,27.1975"; // proximity bias for geocoding (Stuart, FL)
 
+// Trip length assumed for legacy /reserve requests, which carry no destination
+// code. Roughly a Fort Lauderdale round trip — long enough to be safe.
+const LEGACY_BLOCK_HOURS = 3.5;
+
 export default {
-  async fetch(request, env) {
+  // Two schedules share this handler; event.cron says which fired.
+  //   */15 * * * *  charge sweep — anything that reached T-24h
+  //   0 12 * * *    daily digest — 8am EDT / 7am EST
+  async scheduled(event, env, ctx) {
+    if (event.cron === "0 12 * * *") {
+      ctx.waitUntil(runDigest(env));
+    } else {
+      ctx.waitUntil(runScheduled(env, ctx));
+    }
+  },
+
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
     const method = request.method;
@@ -37,7 +71,7 @@ export default {
     const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
     const cors = {
       "Access-Control-Allow-Origin": allow,
-      "Access-Control-Allow-Methods": "POST, PATCH, GET, OPTIONS",
+      "Access-Control-Allow-Methods": "POST, PATCH, GET, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Credentials": "true",
       "Vary": "Origin",
@@ -50,9 +84,31 @@ export default {
         return await handleReserve(request, env, cors);
       }
 
+      // ---------- public booking engine (no auth) ----------
+      // These sit ABOVE the /api/ auth gate below on purpose: the booking
+      // form on the public site calls them cross-origin.
+      if (path === "/api/config" && method === "GET") {
+        return await handleConfig(env, cors);
+      }
+      if (path === "/api/quote" && method === "POST") {
+        return await handleQuote(request, env, cors);
+      }
+      if (path === "/api/day" && method === "GET") {
+        return await handleDay(url, env, cors);
+      }
+      if (path === "/api/book" && method === "POST") {
+        return await handleBook(request, env, cors, ctx);
+      }
+      if (path === "/api/manage" && method === "GET") {
+        return await handleManageGet(url, env, cors);
+      }
+      if (path === "/api/manage/cancel" && method === "POST") {
+        return await handleManageCancel(request, env, cors, ctx);
+      }
+
       // ---------- dashboard page ----------
       if (path === "/admin" && method === "GET") {
-        return new Response(renderDashboard(env), {
+        return new Response(renderDashboard(), {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
@@ -113,6 +169,32 @@ export default {
           return json({ ok: true }, 200, cors);
         }
 
+        if (path === "/api/health" && method === "GET") {
+          return await handleHealth(env, cors);
+        }
+
+        if (path === "/api/blackouts" || path.startsWith("/api/blackouts/")) {
+          return await handleBlackouts(request, url, env, cors, method);
+        }
+
+        const mExtras = path.match(/^\/api\/bookings\/(\d+)\/extras$/);
+        if (mExtras && method === "POST") {
+          return await handleExtras(request, env, cors, Number(mExtras[1]), ctx);
+        }
+
+        // Manual "run the charge sweep now" button for the admin screen.
+        if (path === "/api/run-charges" && method === "POST") {
+          const out = await runScheduled(env, ctx);
+          return json(out, 200, cors);
+        }
+
+        // Send the daily digest on demand — also the way to prove the
+        // heartbeat works without waiting until tomorrow morning.
+        if (path === "/api/run-digest" && method === "POST") {
+          const out = await runDigest(env);
+          return json(out, 200, cors);
+        }
+
         if (path === "/api/customers" && method === "GET") {
           const { results } = await env.DB.prepare(
             `SELECT c.*, COUNT(b.id) AS ride_count
@@ -134,7 +216,7 @@ export default {
 
 /* ---------------- reservation handling ---------------- */
 
-async function handleReserve(request, env, cors) {
+export async function handleReserve(request, env, cors) {
   let d;
   try { d = await request.json(); } catch { return json({ error: "Invalid request" }, 400, cors); }
 
@@ -156,15 +238,32 @@ async function handleReserve(request, env, cors) {
         geocode(d.pickup, env),
         geocode(d.dropoff, env),
       ]);
+      // Legacy quote-request path (the old form still posts here). It has no
+      // destination code and therefore no known trip length, but it MUST still
+      // occupy the calendar — otherwise an enquiry and a paid booking can land
+      // on the same 5am slot and Matt is double-booked. A conservative default
+      // block is far better than none.
+      const settings = await loadSettings(env);
+      const rideStartUtc = localToUtc(d.date, d.time, settings.tz);
+      let blockStart = null, blockEnd = null;
+      if (Number.isFinite(rideStartUtc)) {
+        const w = blockWindow(rideStartUtc, LEGACY_BLOCK_HOURS, settings);
+        blockStart = w.start;
+        blockEnd = w.end;
+      }
+
       await env.DB.prepare(
         `INSERT INTO bookings
            (customer_id, service, pickup, pickup_lat, pickup_lng, dropoff, dropoff_lat, dropoff_lng,
-            ride_date, ride_time, passengers, notes, source)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'website')`
+            ride_date, ride_time, passengers, notes, source,
+            ride_start_utc, block_start_utc, block_end_utc, hours_engaged)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'website', ?,?,?,?)`
       ).bind(
         customerId, d.service, d.pickup, pu?.lat ?? null, pu?.lng ?? null,
         d.dropoff, dropoff?.lat ?? null, dropoff?.lng ?? null,
-        d.date, d.time, d.passengers, d.notes || ""
+        d.date, d.time, d.passengers, d.notes || "",
+        Number.isFinite(rideStartUtc) ? rideStartUtc : null,
+        blockStart, blockEnd, LEGACY_BLOCK_HOURS
       ).run();
     } catch (e) {
       // swallow — the email still goes out so the booking is never lost
@@ -343,273 +442,6 @@ function json(obj, status, cors) {
   });
 }
 
-function renderDashboard(env) {
-  const token = env.MAPBOX_TOKEN || "";
-  return DASHBOARD_HTML.replace("__MAPBOX_TOKEN__", token);
+function renderDashboard() {
+  return DASHBOARD_HTML;
 }
-
-/* ---------------- dashboard (served at /admin) ---------------- */
-
-const DASHBOARD_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>Amedeo's CRM</title>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
-<style>
-  :root{--navy:#0e2340;--navy2:#16335c;--gold:#c4a253;--ink:#1b2533;--muted:#7b8597;--line:#e3e8ef;--bg:#f4f6f9;}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-  /* login */
-  #login{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;padding:24px}
-  .login-card{background:#fff;border-radius:14px;padding:30px 26px;width:100%;max-width:340px;text-align:center}
-  .login-card h1{font-size:1.2rem;margin:0 0 4px}
-  .login-card .sub{color:var(--gold);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px}
-  input,select,textarea{font:inherit;width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
-  .btn{display:inline-block;border:none;border-radius:9px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--gold);color:#fff}
-  .btn.block{width:100%}
-  .err{color:#c2483d;font-size:.85rem;margin-top:10px;min-height:1em}
-  /* app */
-  #app{display:none;padding-bottom:74px}
-  header{background:var(--navy);color:#fff;padding:16px 18px;position:sticky;top:0;z-index:20}
-  header .brand{font-weight:800;font-size:1.05rem}
-  header .brand small{display:block;color:var(--gold);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-top:2px}
-  .wrap{padding:14px}
-  .count{color:var(--muted);font-size:.82rem;margin:2px 2px 12px}
-  /* booking card */
-  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 4px 14px rgba(16,35,64,.05)}
-  .card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-  .card .when{font-weight:700}
-  .card .svc{font-size:.72rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
-  .card .who{margin:8px 0 4px;font-weight:600}
-  .card a.call{color:var(--navy2);text-decoration:none;font-weight:600}
-  .route{font-size:.9rem;color:#384559;margin:6px 0;line-height:1.5}
-  .route .pin{color:var(--gold)}
-  .meta{font-size:.8rem;color:var(--muted);margin:4px 0}
-  .ctrls{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
-  .ctrls select{width:auto;flex:1;min-width:120px;padding:9px 10px}
-  .ctrls .price{width:96px}
-  .toggle{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:30px;padding:9px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
-  .toggle.on{background:#1f7a4d;border-color:#1f7a4d;color:#fff}
-  .badge{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:20px;background:var(--bg);color:var(--muted)}
-  .badge.new{background:#fdf3e2;color:#9a6b12}
-  .badge.confirmed{background:#e7f0ff;color:#1d4ed8}
-  .badge.done{background:#e9f6ee;color:#1f7a4d}
-  .badge.canceled{background:#f6e9e9;color:#b03a3a}
-  /* map */
-  #map{width:100%;height:calc(100vh - 200px);min-height:340px;border-radius:12px;overflow:hidden}
-  .mapbar{display:flex;gap:8px;margin-bottom:10px}
-  /* customers */
-  .crow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-  .crow .nm{font-weight:600}
-  .crow .sm{font-size:.8rem;color:var(--muted)}
-  .rides{background:var(--navy);color:#fff;border-radius:20px;font-size:.72rem;font-weight:700;padding:4px 10px}
-  .pad{padding:30px;text-align:center;color:var(--muted)}
-  /* bottom nav */
-  nav.tabs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:20}
-  nav.tabs .tab{flex:1;border:none;background:none;padding:12px 4px 14px;color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer}
-  nav.tabs .tab.active{color:var(--navy)}
-  nav.tabs .tab .ic{display:block;font-size:1.15rem;margin-bottom:2px}
-</style>
-</head>
-<body>
-
-<div id="login">
-  <div class="login-card">
-    <h1>Amedeo's CRM</h1>
-    <div class="sub">Private Car Service</div>
-    <input id="pw" type="password" placeholder="Password" autocomplete="current-password"/>
-    <div class="err" id="loginErr"></div>
-    <button class="btn block" id="loginBtn">Sign in</button>
-  </div>
-</div>
-
-<div id="app">
-  <header>
-    <div class="brand">Amedeo's CRM<small>Private Car Service</small></div>
-  </header>
-
-  <section id="view-bookings" class="wrap">
-    <div class="count" id="bkCount"></div>
-    <div id="bkList"></div>
-  </section>
-
-  <section id="view-map" class="wrap" style="display:none">
-    <div class="mapbar">
-      <select id="mapDate"></select>
-    </div>
-    <div id="map"></div>
-  </section>
-
-  <section id="view-customers" class="wrap" style="display:none">
-    <div class="count" id="custCount"></div>
-    <div id="custList"></div>
-  </section>
-</div>
-
-<nav class="tabs" id="tabs" style="display:none">
-  <button class="tab active" data-view="view-bookings"><span class="ic">&#128197;</span>Bookings</button>
-  <button class="tab" data-view="view-map"><span class="ic">&#128205;</span>Map</button>
-  <button class="tab" data-view="view-customers"><span class="ic">&#128100;</span>Customers</button>
-  <button class="tab" data-view="logout"><span class="ic">&#9211;</span>Sign out</button>
-</nav>
-
-<script>
-window.MAPBOX_TOKEN = "__MAPBOX_TOKEN__";
-var state = { bookings: [], customers: [], map: null, markers: [], mapReady: false };
-
-function el(tag, cls, txt){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
-function gid(id){ return document.getElementById(id); }
-
-function api(path, opts){
-  opts = opts || {};
-  opts.credentials = "include";
-  if (opts.body){ opts.headers = {"Content-Type":"application/json"}; opts.body = JSON.stringify(opts.body); }
-  return fetch(path, opts).then(function(r){ return r.json().then(function(j){ return {ok:r.ok,status:r.status,data:j}; }).catch(function(){ return {ok:r.ok,status:r.status,data:{}}; }); });
-}
-
-/* ---- auth ---- */
-function checkAuth(){ api("/api/me").then(function(r){ if(r.data && r.data.authed){ enterApp(); } }); }
-function doLogin(){
-  var pw = gid("pw").value;
-  api("/admin/login", {method:"POST", body:{password:pw}}).then(function(r){
-    if(r.ok){ enterApp(); } else { gid("loginErr").textContent = "Wrong password"; }
-  });
-}
-function logout(){ api("/admin/logout", {method:"POST"}).then(function(){ location.reload(); }); }
-function enterApp(){
-  gid("login").style.display = "none";
-  gid("app").style.display = "block";
-  gid("tabs").style.display = "flex";
-  loadBookings(); loadCustomers();
-}
-
-/* ---- nav ---- */
-function showView(id){
-  if(id === "logout"){ logout(); return; }
-  ["view-bookings","view-map","view-customers"].forEach(function(v){ gid(v).style.display = (v===id)?"block":"none"; });
-  var tabs = document.querySelectorAll(".tab");
-  for(var i=0;i<tabs.length;i++){ tabs[i].classList.toggle("active", tabs[i].getAttribute("data-view")===id); }
-  if(id === "view-map") initMap();
-}
-
-/* ---- bookings ---- */
-function loadBookings(){
-  api("/api/bookings").then(function(r){ state.bookings = (r.data && r.data.bookings) || []; renderBookings(); buildDateFilter(); });
-}
-function fmtDate(d){ if(!d) return ""; var p=d.split("-"); if(p.length!==3) return d; return p[1]+"/"+p[2]+"/"+p[0].slice(2); }
-function renderBookings(){
-  var list = gid("bkList"); list.innerHTML = "";
-  gid("bkCount").textContent = state.bookings.length + " booking" + (state.bookings.length===1?"":"s");
-  if(!state.bookings.length){ list.appendChild(el("div","pad","No bookings yet. They'll appear here the moment someone books on the site.")); return; }
-  state.bookings.forEach(function(b){
-    var card = el("div","card");
-    var top = el("div","top");
-    var when = el("div","when", fmtDate(b.ride_date) + (b.ride_time ? "  ·  " + b.ride_time : ""));
-    var badge = el("span","badge " + (b.status||"new"), b.status||"new");
-    top.appendChild(when); top.appendChild(badge); card.appendChild(top);
-    card.appendChild(el("div","svc", b.service || "Ride"));
-
-    var who = el("div","who"); who.appendChild(document.createTextNode((b.customer_name||"—") + "  "));
-    if(b.customer_phone){ var a=el("a","call","☎ " + b.customer_phone); a.href="tel:"+b.customer_phone; who.appendChild(a); }
-    card.appendChild(who);
-
-    var route = el("div","route");
-    route.appendChild(el("span","pin","● ")); route.appendChild(document.createTextNode(b.pickup||"—"));
-    route.appendChild(el("br"));
-    route.appendChild(el("span","pin","◎ ")); route.appendChild(document.createTextNode(b.dropoff||"—"));
-    card.appendChild(route);
-
-    var metaTxt = (b.passengers? b.passengers+" pax" : "");
-    if(b.notes) metaTxt += (metaTxt?"  ·  ":"") + b.notes;
-    if(metaTxt) card.appendChild(el("div","meta", metaTxt));
-
-    var ctrls = el("div","ctrls");
-    var sel = el("select");
-    ["new","confirmed","done","canceled"].forEach(function(s){ var o=el("option",null,s); o.value=s; if((b.status||"new")===s)o.selected=true; sel.appendChild(o); });
-    sel.onchange = function(){ updateBooking(b.id,{status:sel.value}); b.status=sel.value; badge.className="badge "+sel.value; badge.textContent=sel.value; };
-    ctrls.appendChild(sel);
-
-    var price = el("input","price"); price.type="number"; price.placeholder="$ rate"; price.value = (b.price!=null? b.price : "");
-    price.onchange = function(){ updateBooking(b.id,{price:price.value}); };
-    ctrls.appendChild(price);
-
-    var paid = el("button","toggle"+(b.paid?" on":""), b.paid?"Paid":"Unpaid");
-    paid.onclick = function(){ b.paid = b.paid?0:1; paid.className="toggle"+(b.paid?" on":""); paid.textContent=b.paid?"Paid":"Unpaid"; updateBooking(b.id,{paid:b.paid}); };
-    ctrls.appendChild(paid);
-
-    card.appendChild(ctrls);
-    list.appendChild(card);
-  });
-}
-function updateBooking(id, patch){ api("/api/bookings/"+id, {method:"PATCH", body:patch}); }
-
-/* ---- customers ---- */
-function loadCustomers(){
-  api("/api/customers").then(function(r){ state.customers = (r.data && r.data.customers) || []; renderCustomers(); });
-}
-function renderCustomers(){
-  var list = gid("custList"); list.innerHTML = "";
-  gid("custCount").textContent = state.customers.length + " customer" + (state.customers.length===1?"":"s");
-  if(!state.customers.length){ list.appendChild(el("div","pad","No customers yet.")); return; }
-  state.customers.forEach(function(c){
-    var row = el("div","crow");
-    var left = el("div");
-    left.appendChild(el("div","nm", c.name||"—"));
-    var sm = el("div","sm", [c.phone, c.email].filter(Boolean).join("  ·  "));
-    left.appendChild(sm);
-    row.appendChild(left);
-    row.appendChild(el("span","rides", (c.ride_count||0) + " rides"));
-    list.appendChild(row);
-  });
-}
-
-/* ---- map ---- */
-function buildDateFilter(){
-  var sel = gid("mapDate"); if(!sel) return;
-  var dates = {}; state.bookings.forEach(function(b){ if(b.ride_date) dates[b.ride_date]=1; });
-  var keys = Object.keys(dates).sort();
-  sel.innerHTML = "";
-  var all = el("option",null,"All dates"); all.value=""; sel.appendChild(all);
-  keys.forEach(function(d){ var o=el("option",null,fmtDate(d)); o.value=d; sel.appendChild(o); });
-  sel.onchange = renderPins;
-}
-function initMap(){
-  if(!window.MAPBOX_TOKEN){ gid("map").innerHTML = '<div class="pad">Add a Mapbox token (MAPBOX_TOKEN secret) to enable the map.</div>'; return; }
-  if(state.map){ renderPins(); return; }
-  mapboxgl.accessToken = window.MAPBOX_TOKEN;
-  state.map = new mapboxgl.Map({ container:"map", style:"mapbox://styles/mapbox/dark-v11", center:[-80.25,27.19], zoom:8.5 });
-  state.map.on("load", function(){ state.mapReady = true; renderPins(); });
-}
-function renderPins(){
-  if(!state.map || !state.mapReady) return;
-  state.markers.forEach(function(m){ m.remove(); }); state.markers = [];
-  var filter = gid("mapDate").value;
-  var bounds = new mapboxgl.LngLatBounds(); var any=false;
-  state.bookings.forEach(function(b){
-    if(filter && b.ride_date !== filter) return;
-    if(b.pickup_lat==null || b.pickup_lng==null) return;
-    var elm = el("div"); elm.style.cssText = "width:16px;height:16px;border-radius:50%;background:#c4a253;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)";
-    var pop = new mapboxgl.Popup({offset:14}).setHTML(
-      '<div style="font:600 13px sans-serif;color:#1b2533">'+ escapeHtml(b.customer_name||"Ride") +'</div>'+
-      '<div style="font:400 12px sans-serif;color:#7b8597">'+ escapeHtml(fmtDate(b.ride_date)+" "+(b.ride_time||"")) +'</div>'+
-      '<div style="font:400 12px sans-serif;color:#384559;margin-top:3px">'+ escapeHtml(b.pickup||"") +'</div>'
-    );
-    var mk = new mapboxgl.Marker(elm).setLngLat([b.pickup_lng,b.pickup_lat]).setPopup(pop).addTo(state.map);
-    state.markers.push(mk); bounds.extend([b.pickup_lng,b.pickup_lat]); any=true;
-  });
-  if(any){ try{ state.map.fitBounds(bounds,{padding:60,maxZoom:12,duration:500}); }catch(e){} }
-}
-function escapeHtml(s){ return String(s||"").replace(/[<>&"]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;","\\"":"&quot;"}[c];}); }
-
-/* ---- wire up ---- */
-gid("loginBtn").onclick = doLogin;
-gid("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
-var tb = document.querySelectorAll(".tab");
-for(var i=0;i<tb.length;i++){ (function(t){ t.onclick=function(){ showView(t.getAttribute("data-view")); }; })(tb[i]); }
-checkAuth();
-</script>
-</body>
-</html>`;

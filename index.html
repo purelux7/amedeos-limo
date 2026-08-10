@@ -16,6 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
+  <!-- Accept.js: card data goes from the browser straight to Authorize.net.
+       It never touches our server, which keeps the site at PCI SAQ A-EP. -->
+  <script src="https://js.authorize.net/v1/Accept.js" charset="utf-8"></script>
 </head>
 <body>
 
@@ -70,7 +73,7 @@
         <h1>Private Luxury Car Service<br />Across South Florida</h1>
         <p class="hero-sub">Your personal chauffeur for airport transfers, daily commutes, and full days on call — discreet, on time, and always at your service. We serve every major airport in Florida.</p>
         <div class="hero-buttons">
-          <a href="#reserve" class="btn btn-gold">Request a Free Quote</a>
+          <a href="#reserve" class="btn btn-gold">Book Your Ride</a>
           <a href="tel:+18486670999" class="btn btn-ghost">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
             848-667-0999
@@ -151,8 +154,13 @@
       <div class="container reserve-layout">
         <div class="reserve-intro fade-in">
           <p class="eyebrow">Reservations</p>
-          <h2>Get Your Free Quote</h2>
-          <p>Send your trip details for a free, no-obligation flat-rate quote. Matt confirms the schedule and price personally — usually within the hour.</p>
+          <h2>Book Your Ride</h2>
+          <p>Flat rates to every major Florida airport — no surge, no surprises. Your seat is confirmed the moment you book.</p>
+          <ul class="reserve-points">
+            <li><strong>Nothing charged today.</strong> Your card is only run the day before your ride.</li>
+            <li><strong>Cancel free</strong> up to 24 hours before pickup — no money ever moves.</li>
+            <li><strong>We track your flight.</strong> A delay never costs you wait time.</li>
+          </ul>
           <div class="reserve-call">
             <span>Prefer to talk it through?</span>
             <a href="tel:+18486670999">Call 848-667-0999</a>
@@ -162,80 +170,128 @@
         <div class="reserve-card fade-in">
           <form id="reserveForm" novalidate>
             <div class="hp-field" aria-hidden="true">
-              <label>Company<input type="text" name="company" tabindex="-1" autocomplete="off" /></label>
+              <label>Company<input type="text" id="company" name="company" tabindex="-1" autocomplete="off" /></label>
             </div>
+
             <div class="form-grid">
+              <div class="field field-full">
+                <label for="dest">Where are you going?</label>
+                <select id="dest" required>
+                  <option value="" disabled selected>Loading rates…</option>
+                </select>
+                <span class="error" data-for="dest"></span>
+              </div>
+              <div class="field field-full" id="hoursWrap" hidden>
+                <label for="hours">How many hours?</label>
+                <select id="hours"></select>
+              </div>
               <div class="field">
                 <label for="pickup">Pickup location</label>
-                <input type="text" id="pickup" name="pickup" autocomplete="off" required />
+                <input type="text" id="pickup" autocomplete="off" required placeholder="123 SE Ocean Blvd, Stuart" />
                 <span class="error" data-for="pickup"></span>
               </div>
               <div class="field">
                 <label for="dropoff">Drop off location</label>
-                <input type="text" id="dropoff" name="dropoff" autocomplete="off" required />
+                <input type="text" id="dropoff" autocomplete="off" required placeholder="Terminal, hotel, address" />
                 <span class="error" data-for="dropoff"></span>
               </div>
               <div class="field">
                 <label for="date">Date</label>
-                <input type="date" id="date" name="date" required />
+                <input type="date" id="date" required />
                 <span class="error" data-for="date"></span>
               </div>
               <div class="field">
-                <label for="time">Time</label>
-                <input type="time" id="time" name="time" required />
+                <label for="time">Pickup time</label>
+                <input type="time" id="time" step="900" required />
                 <span class="error" data-for="time"></span>
               </div>
               <div class="field">
                 <label for="passengers">Passengers</label>
-                <select id="passengers" name="passengers" required>
+                <select id="passengers" required>
                   <option value="" disabled selected>Select</option>
-                  <option>1</option><option>2</option><option>3</option>
-                  <option>4</option><option>5</option><option>6+</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
                 </select>
                 <span class="error" data-for="passengers"></span>
               </div>
               <div class="field">
-                <label for="service">Service type</label>
-                <select id="service" name="service" required>
-                  <option value="" disabled selected>Select</option>
-                  <option>Airport Transfer</option>
-                  <option>Scheduled Commute</option>
-                  <option>Full Day Chauffeur</option>
-                  <option>Point to Point</option>
-                  <option>Other</option>
-                </select>
-                <span class="error" data-for="service"></span>
+                <label for="flight">Flight no. <span class="optional">(optional)</span></label>
+                <input type="text" id="flight" autocomplete="off" placeholder="AA1422" />
               </div>
               <div class="field">
                 <label for="name">Name</label>
-                <input type="text" id="name" name="name" autocomplete="name" required />
+                <input type="text" id="name" autocomplete="name" required />
                 <span class="error" data-for="name"></span>
               </div>
               <div class="field">
                 <label for="phone">Phone</label>
-                <input type="tel" id="phone" name="phone" autocomplete="tel" required />
+                <input type="tel" id="phone" autocomplete="tel" required />
                 <span class="error" data-for="phone"></span>
               </div>
               <div class="field field-full">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" autocomplete="email" required />
+                <input type="email" id="email" autocomplete="email" required />
                 <span class="error" data-for="email"></span>
               </div>
               <div class="field field-full">
                 <label for="notes">Notes <span class="optional">(optional)</span></label>
-                <textarea id="notes" name="notes" rows="3" placeholder="Flight number, child seat, special requests…"></textarea>
+                <textarea id="notes" rows="2" placeholder="Child seat, extra luggage, gate code…"></textarea>
               </div>
             </div>
-            <button type="submit" class="btn btn-gold btn-block">Request Reservation</button>
+
+            <!-- live price + availability -->
+            <div class="quote-panel" id="quotePanel" hidden></div>
+
+            <!-- card -->
+            <div class="pay-block">
+              <h3 class="pay-title">Card details</h3>
+              <p class="pay-note">
+                <strong>Nothing is charged today.</strong> Your card is saved securely and only charged
+                <span id="chargeWhen">24 hours before your ride</span>. Cancel before then and you are not charged at all.
+              </p>
+              <div class="form-grid">
+                <div class="field field-full">
+                  <label for="cc">Card number</label>
+                  <input type="text" id="cc" inputmode="numeric" autocomplete="off" maxlength="23" placeholder="•••• •••• •••• ••••" />
+                  <span class="error" data-for="cc"></span>
+                </div>
+                <div class="field">
+                  <label for="exp">Expiry</label>
+                  <input type="text" id="exp" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="09/29" />
+                  <span class="error" data-for="exp"></span>
+                </div>
+                <div class="field">
+                  <label for="cvv">CVV</label>
+                  <input type="text" id="cvv" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="123" />
+                  <span class="error" data-for="cvv"></span>
+                </div>
+                <div class="field field-full">
+                  <label for="zip">Billing ZIP</label>
+                  <input type="text" id="zip" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="34994" />
+                  <span class="error" data-for="zip"></span>
+                </div>
+              </div>
+
+              <label class="terms-check">
+                <input type="checkbox" id="terms" />
+                <span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and
+                <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and authorize Amedeo's to store
+                this card and charge it for this ride and any wait time, tolls, or extra stops as described.</span>
+              </label>
+            </div>
+
+            <p class="form-error" id="formError" hidden></p>
+            <button type="submit" class="btn btn-gold btn-block" id="submitBtn">Confirm Booking</button>
+            <p class="pay-secure">Card details go directly to Authorize.net. This website never sees them.</p>
           </form>
 
           <div class="form-success" id="formSuccess" hidden>
             <div class="success-mark" aria-hidden="true">
               <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none"/><path fill="none" d="M14 27l8 8 16-16"/></svg>
             </div>
-            <h3>Reservation Requested</h3>
-            <p>Thank you — your request is in. Matt will personally confirm your ride and flat rate shortly. Need it sooner? <a href="tel:+18486670999">Call 848-667-0999</a>.</p>
-            <button type="button" class="btn btn-outline" id="newRequest">Make another request</button>
+            <h3>You're Booked</h3>
+            <p id="successSub">Thank you — your ride is confirmed.</p>
+            <div class="recap" id="successRecap"></div>
+            <a class="btn btn-outline" id="manageLink" href="#" target="_blank" rel="noopener">View or cancel this booking</a>
           </div>
         </div>
       </div>
@@ -278,7 +334,7 @@
           <article class="service-card service-card--cta fade-in">
             <h3>Something else in mind?</h3>
             <p>If you need to get somewhere in comfort, just ask. Custom trips are always welcome.</p>
-            <a href="#reserve" class="link-arrow">Request a quote →</a>
+            <a href="#reserve" class="link-arrow">Book this ride →</a>
           </article>
         </div>
       </div>
@@ -457,7 +513,7 @@
             <span class="route-meta">Long-distance · Flat rate · Door to terminal</span>
           </a>
         </div>
-        <p class="airport-note fade-in">Need a route not listed here? <a href="#reserve" class="link-arrow">Request a free quote →</a></p>
+        <p class="airport-note fade-in">Need a route not listed here? <a href="#reserve" class="link-arrow">Book a ride →</a></p>
       </div>
     </section>
 
@@ -544,6 +600,10 @@
         <p>Stuart, Florida</p>
         <p>Treasure Coast · Palm Beach · Broward</p>
         <p class="footer-cards">Visa · Mastercard · American Express</p>
+        <p class="footer-legal">
+          <a href="/terms.html">Terms of Service</a> &middot;
+          <a href="/privacy.html">Privacy Policy</a>
+        </p>
       </div>
     </div>
     <div class="container footer-bottom">
@@ -557,6 +617,6 @@
     <span>Call Now — 848-667-0999</span>
   </a>
 
-  <script src="script.js?v=3"></script>
+  <script src="script.js?v=7"></script>
 </body>
 </html>

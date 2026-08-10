@@ -295,6 +295,22 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 .coverage-tags { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 34px; }
 .coverage-tags span { font-size: 0.78rem; letter-spacing: 0.04em; color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 40px; padding: 9px 20px; }
 
+/* ===== Popular Routes ===== */
+.routes { background: var(--bg-soft); }
+.routes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.route-card { display: flex; flex-direction: column; gap: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease), border-color 0.35s var(--ease); }
+.route-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--gold); }
+.route-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--display); font-weight: 600; font-size: 1.0rem; line-height: 1.3; }
+.route-from { color: var(--muted); }
+.route-arrow { color: var(--gold); font-weight: 700; }
+.route-to { color: var(--ink); }
+.route-meta { font-size: 0.76rem; letter-spacing: 0.02em; color: var(--muted); }
+.routes .airport-note { margin-top: 30px; }
+.routes .link-arrow { color: var(--gold); }
+.routes .link-arrow:hover { color: var(--ink); }
+@media (max-width: 900px) { .routes-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .routes-grid { grid-template-columns: 1fr; } }
+
 /* ============================================================
    FAQ
    ============================================================ */
@@ -400,3 +416,176 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
   .cta-buttons { flex-direction: column; }
   .cta-buttons .btn { width: 100%; }
 }
+
+/* ============================================================
+   BOOKING — live quote, card capture, confirmation
+   Added when the reservation form became a real booking that
+   takes a card. Reuses .field / .form-grid from the form above.
+   ============================================================ */
+
+.reserve-points {
+  list-style: none;
+  margin: 22px 0 26px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.reserve-points li {
+  position: relative;
+  padding-left: 28px;
+  color: var(--body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.reserve-points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 14px;
+  height: 8px;
+  border-left: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  transform: rotate(-45deg);
+}
+.reserve-points strong { color: var(--ink); }
+
+/* ---------- live quote panel ---------- */
+.quote-panel {
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin: 4px 0 22px;
+}
+.quote-panel .q-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 0.95rem;
+  color: #d5dfec;
+}
+.quote-panel .q-line span:last-child { font-variant-numeric: tabular-nums; }
+.quote-panel .q-line.q-total {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 10px;
+  padding-top: 13px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #fff;
+}
+.quote-panel .q-note {
+  color: #9db0c9;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  margin: 14px 0 0;
+}
+.q-avail {
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.q-avail.is-open { background: rgba(94, 200, 150, 0.16); color: #9ee3c2; }
+.q-avail.is-busy { background: rgba(255, 122, 112, 0.16); color: #ffb4ae; }
+.q-alts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.q-alts button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font: 600 0.82rem var(--sans);
+  cursor: pointer;
+  transition: background 0.2s var(--ease);
+}
+.q-alts button:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* ---------- card block ---------- */
+.pay-block {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  margin-top: 4px;
+}
+.pay-title {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+.pay-note {
+  background: var(--gold-soft);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 15px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--body);
+  margin: 0 0 18px;
+}
+.pay-note strong { color: var(--ink); }
+
+.terms-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 18px 0 4px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--body);
+  cursor: pointer;
+}
+.terms-check input {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.terms-check a { color: var(--navy-2); font-weight: 600; }
+.terms-check a:hover { color: var(--gold); }
+
+.pay-secure {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 12px 0 0;
+}
+.form-error {
+  background: #fdecea;
+  border-left: 3px solid #b03a3a;
+  border-radius: 0 8px 8px 0;
+  color: #8c2f2a;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 11px 14px;
+  margin: 16px 0 0;
+}
+#submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---------- confirmation recap ---------- */
+.form-success .recap {
+  text-align: left;
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 16px;
+  margin-bottom: 22px;
+}
+.form-success .recap .r {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 0.92rem;
+}
+.form-success .recap .r span:first-child { color: var(--muted); }
+.form-success .recap .r span:last-child { color: var(--ink); font-weight: 600; text-align: right; }
+
+.footer-legal { margin-top: 8px; font-size: 0.82rem; }
+.footer-legal a { color: inherit; opacity: 0.75; }
+.footer-legal a:hover { opacity: 1; color: var(--gold); }

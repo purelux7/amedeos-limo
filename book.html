@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book a Ride — Amedeo's Private Car Service</title>
+<meta name="description" content="Reserve a private chauffeur to any Florida airport. Flat rates, no surge, and nothing charged until the day before your ride." />
+
+<!-- Accept.js. Card data goes from the browser STRAIGHT to Authorize.net.
+     It never touches this site's server, which is what keeps us at PCI SAQ A-EP
+     instead of full SAQ D. The card inputs below deliberately have NO name
+     attributes so a browser can never post them anywhere. -->
+<script src="https://js.authorize.net/v1/Accept.js" charset="utf-8"></script>
+
+<style>
+  :root{
+    --navy:#0e2340; --navy2:#16335c; --gold:#a8801f; --gold2:#c4a253;
+    --ink:#1b2533; --muted:#5b6779; --line:#dfe5ee; --bg:#f5f7fa;
+    --ok:#1e6a4c; --ok-bg:#e7f1ec; --bad:#9e2b25; --bad-bg:#f8ebea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  header{background:var(--navy);padding:26px 22px}
+  header .in{max-width:44rem;margin:0 auto;display:flex;justify-content:space-between;
+             align-items:center;gap:16px;flex-wrap:wrap}
+  .brand{color:#fff;font-weight:800;font-size:1.05rem;line-height:1.2;text-decoration:none}
+  .brand small{display:block;color:var(--gold2);font-size:.62rem;letter-spacing:.16em;
+               text-transform:uppercase;font-weight:700;margin-top:3px}
+  header a.tel{color:#fff;text-decoration:none;font-weight:700;font-size:.95rem;
+               border:1px solid rgba(255,255,255,.3);padding:8px 15px;border-radius:8px}
+  main{max-width:44rem;margin:0 auto;padding:26px 18px 70px}
+  h1{font-size:clamp(1.5rem,4vw,2rem);margin:0 0 6px;line-height:1.2;color:var(--navy)}
+  .lede{color:var(--muted);margin:0 0 22px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px;margin-bottom:16px}
+  .step{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .step .n{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;
+           font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .step h2{font-size:1rem;margin:0;color:var(--navy)}
+
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:.72rem;font-weight:800;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+  input,select,textarea{font:inherit;width:100%;padding:12px 13px;border:1px solid var(--line);
+                        border-radius:9px;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+  input.bad,select.bad{border-color:var(--bad);background:var(--bad-bg)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:5px}
+  .err{color:var(--bad);font-size:.82rem;margin-top:5px;font-weight:600}
+
+  /* quote panel */
+  #quote{display:none;background:var(--navy);color:#fff;border-radius:13px;padding:20px;margin-bottom:16px}
+  #quote .qline{display:flex;justify-content:space-between;padding:5px 0;font-size:.95rem}
+  #quote .qline.total{border-top:1px solid rgba(255,255,255,.22);margin-top:9px;padding-top:12px;
+                      font-weight:800;font-size:1.25rem}
+  #quote .qsub{color:#a9bcd6;font-size:.82rem;margin-top:12px;line-height:1.5}
+  #quote .amt{font-variant-numeric:tabular-nums}
+  .avail{margin-top:13px;padding:11px 13px;border-radius:9px;font-size:.88rem;font-weight:600}
+  .avail.ok{background:rgba(94,200,150,.16);color:#9fe3c1}
+  .avail.no{background:rgba(255,120,110,.16);color:#ffb3ad}
+  .alts{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .alts button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);
+               border-radius:20px;padding:7px 13px;font-weight:700;font-size:.82rem;cursor:pointer}
+  .alts button:hover{background:rgba(255,255,255,.22)}
+
+  .notice{background:#fbf8f0;border-left:3px solid var(--gold);padding:13px 15px;
+          border-radius:0 8px 8px 0;font-size:.9rem;margin:14px 0}
+  .notice strong{color:var(--navy)}
+
+  .terms-row{display:flex;gap:11px;align-items:flex-start;margin:16px 0 6px}
+  .terms-row input{width:20px;height:20px;flex:none;margin-top:2px}
+  .terms-row label{font-size:.88rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400}
+  .terms-row a{color:var(--gold)}
+
+  .btn{width:100%;border:none;border-radius:10px;padding:16px;font-size:1.02rem;font-weight:800;
+       cursor:pointer;background:var(--gold);color:#fff}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn.secondary{background:#fff;color:var(--navy2);border:1px solid var(--line)}
+
+  .lock{display:flex;align-items:center;gap:7px;justify-content:center;color:var(--muted);
+        font-size:.78rem;margin-top:12px}
+
+  /* success */
+  #done{display:none}
+  #done .big{background:#fff;border:1px solid var(--line);border-radius:13px;padding:30px 22px;text-align:center}
+  #done .tick{width:54px;height:54px;border-radius:50%;background:var(--ok-bg);color:var(--ok);
+              display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 14px;font-weight:800}
+  #done h2{margin:0 0 6px;color:var(--navy)}
+  .recap{text-align:left;margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+  .recap .r{display:flex;justify-content:space-between;padding:6px 0;font-size:.92rem;gap:14px}
+  .recap .r span:first-child{color:var(--muted)}
+  @media (max-width:30rem){ .row,.row3{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="in">
+    <a class="brand" href="/">Amedeo's<small>Private Car Service</small></a>
+    <a class="tel" href="tel:+18486670999">848-667-0999</a>
+  </div>
+</header>
+
+<main>
+  <div id="form-wrap">
+    <h1>Book your ride</h1>
+    <p class="lede">Flat rates, no surge pricing. <strong>Nothing is charged today</strong> — your card is only run the day before your ride.</p>
+
+    <!-- 1. destination -->
+    <div class="card">
+      <div class="step"><div class="n">1</div><h2>Where are you going?</h2></div>
+      <div class="field">
+        <label for="dest">Destination</label>
+        <select id="dest"><option value="">Loading rates…</option></select>
+      </div>
+      <div class="field" id="hoursWrap" style="display:none">
+        <label for="hours">How many hours?</label>
+        <select id="hours"></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="pickup">Pickup address</label>
+          <input type="text" id="pickup" autocomplete="off" placeholder="123 SE Ocean Blvd, Stuart" />
+        </div>
+        <div class="field">
+          <label for="dropoff">Drop-off</label>
+          <input type="text" id="dropoff" autocomplete="off" placeholder="Airport terminal, hotel…" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. when -->
+    <div class="card">
+      <div class="step"><div class="n">2</div><h2>When?</h2></div>
+      <div class="row3">
+        <div class="field"><label for="date">Date</label><input type="date" id="date" /></div>
+        <div class="field"><label for="time">Pickup time</label><input type="time" id="time" step="900" /></div>
+        <div class="field">
+          <label for="pax">Passengers</label>
+          <select id="pax"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="flight">Flight number (optional)</label>
+        <input type="text" id="flight" placeholder="AA1422" autocomplete="off" />
+        <div class="hint">We track your flight, so a delay never costs you wait time.</div>
+      </div>
+    </div>
+
+    <!-- live quote -->
+    <div id="quote"></div>
+
+    <!-- 3. you -->
+    <div class="card">
+      <div class="step"><div class="n">3</div><h2>Your details</h2></div>
+      <div class="field"><label for="name">Full name</label><input type="text" id="name" autocomplete="name" /></div>
+      <div class="row">
+        <div class="field"><label for="phone">Mobile</label><input type="tel" id="phone" autocomplete="tel" placeholder="772-555-0100" /></div>
+        <div class="field"><label for="email">Email</label><input type="email" id="email" autocomplete="email" /></div>
+      </div>
+      <div class="field">
+        <label for="notes">Anything we should know? (optional)</label>
+        <textarea id="notes" rows="2" placeholder="Child seat, extra luggage, gate code…"></textarea>
+      </div>
+      <!-- honeypot -->
+      <div style="position:absolute;left:-9999px" aria-hidden="true">
+        <label>Company<input type="text" id="company" tabindex="-1" autocomplete="off" /></label>
+      </div>
+    </div>
+
+    <!-- 4. card -->
+    <div class="card">
+      <div class="step"><div class="n">4</div><h2>Card details</h2></div>
+
+      <div class="notice">
+        <strong>Nothing is charged now.</strong> Your card is saved securely and only
+        charged <span id="chargeWhen">24 hours before your ride</span>. Cancel before
+        then and you are not charged at all.
+      </div>
+
+      <div class="field">
+        <label for="cc">Card number</label>
+        <input type="text" id="cc" inputmode="numeric" autocomplete="off" placeholder="•••• •••• •••• ••••" maxlength="23" />
+      </div>
+      <div class="row3">
+        <div class="field"><label for="exp">Expiry (MM/YY)</label><input type="text" id="exp" inputmode="numeric" autocomplete="off" placeholder="09/29" maxlength="5" /></div>
+        <div class="field"><label for="cvv">CVV</label><input type="text" id="cvv" inputmode="numeric" autocomplete="off" placeholder="123" maxlength="4" /></div>
+        <div class="field"><label for="zip">Billing ZIP</label><input type="text" id="zip" inputmode="numeric" autocomplete="off" placeholder="34994" maxlength="10" /></div>
+      </div>
+
+      <div class="terms-row">
+        <input type="checkbox" id="terms" />
+        <label for="terms">
+          I agree to the <a href="/terms.html" target="_blank">Terms of Service</a> and
+          <a href="/privacy.html" target="_blank">Privacy Policy</a>, and authorize Amedeo's to
+          store this card and charge it for this ride and any wait time, tolls, or extra
+          stops as described.
+        </label>
+      </div>
+
+      <div class="err" id="formErr"></div>
+      <button class="btn" id="submit" style="margin-top:10px">Confirm booking</button>
+      <div class="lock">Card details go directly to Authorize.net. This site never sees them.</div>
+    </div>
+  </div>
+
+  <!-- success -->
+  <div id="done">
+    <div class="big">
+      <div class="tick">&#10003;</div>
+      <h2>You're booked</h2>
+      <p class="lede" id="doneSub" style="margin-bottom:0"></p>
+      <div class="recap" id="doneRecap"></div>
+      <div style="margin-top:20px">
+        <a class="btn secondary" id="manageLink" style="display:block;text-decoration:none;text-align:center;padding:14px" href="#">View or cancel this booking</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var API = "https://afacs-reservations.donny-3e2.workers.dev";
+  var CFG = null, QUOTE = null, AVAIL = null, busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  function val(id) { return ($(id).value || "").trim(); }
+  function money(n) { return "$" + Number(n).toFixed(2); }
+  function mark(id, bad) { $(id).classList.toggle("bad", !!bad); }
+
+  /* ---------- config ---------- */
+  fetch(API + "/api/config").then(function (r) { return r.json(); }).then(function (c) {
+    CFG = c;
+    var sel = $("dest");
+    sel.innerHTML = '<option value="">Choose a destination…</option>';
+    c.rates.forEach(function (r) {
+      var o = document.createElement("option");
+      o.value = r.code;
+      o.textContent = r.label + (r.code === "HOURLY" ? "" : " — " + money(r.price));
+      sel.appendChild(o);
+    });
+    var h = $("hours");
+    for (var i = 3; i <= 12; i++) {
+      var o = document.createElement("option"); o.value = i; o.textContent = i + " hours"; h.appendChild(o);
+    }
+    var today = new Date(Date.now() + (c.minLeadHours || 3) * 3600000);
+    $("date").min = today.toISOString().slice(0, 10);
+    if (!c.payments.enabled) {
+      $("formErr").textContent = "Online booking is temporarily unavailable. Please call 848-667-0999.";
+      $("submit").disabled = true;
+    }
+  }).catch(function () {
+    $("dest").innerHTML = '<option value="">Could not load rates — please call</option>';
+  });
+
+  /* ---------- live quote ---------- */
+  var quoteTimer = null;
+  function requestQuote() {
+    clearTimeout(quoteTimer);
+    quoteTimer = setTimeout(doQuote, 250);
+  }
+  function doQuote() {
+    var dest = val("dest");
+    if (!dest) { $("quote").style.display = "none"; QUOTE = null; return; }
+    var body = { destCode: dest, date: val("date") || null, time: val("time") || null };
+    if (dest === "HOURLY") body.hours = Number(val("hours")) || 3;
+
+    fetch(API + "/api/quote", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.error) { $("quote").style.display = "none"; return; }
+      QUOTE = j.quote; AVAIL = j.availability;
+      if (j.chargeOn) $("chargeWhen").textContent = "on " + j.chargeOn;
+      renderQuote(j);
+    }).catch(function () { $("quote").style.display = "none"; });
+  }
+
+  function renderQuote(j) {
+    var q = j.quote, box = $("quote");
+    var html =
+      '<div class="qline"><span>' + q.label + '</span><span class="amt">' + money(q.base) + '</span></div>' +
+      '<div class="qline"><span>Gratuity (' + q.gratuityPct + '%)</span><span class="amt">' + money(q.gratuity) + '</span></div>' +
+      '<div class="qline total"><span>Total</span><span class="amt">' + money(q.total) + '</span></div>';
+
+    if (j.availability) {
+      if (j.availability.available) {
+        html += '<div class="avail ok">&#10003; That time is available</div>';
+      } else {
+        html += '<div class="avail no">' + j.availability.reason + '</div>';
+        if (j.alternatives && j.alternatives.length) {
+          html += '<div class="alts">';
+          j.alternatives.forEach(function (a) {
+            html += '<button type="button" data-t="' + a.time + '">' + a.pretty.replace(/^.*?, /, "") + '</button>';
+          });
+          html += '</div>';
+        }
+      }
+    }
+    html += '<div class="qsub">Tolls and airport parking are added at cost after your ride. ' +
+            'Nothing is charged today.</div>';
+    box.innerHTML = html;
+    box.style.display = "block";
+
+    Array.prototype.forEach.call(box.querySelectorAll(".alts button"), function (b) {
+      b.onclick = function () { $("time").value = b.getAttribute("data-t"); requestQuote(); };
+    });
+  }
+
+  ["dest", "date", "time", "hours"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      if (id === "dest") $("hoursWrap").style.display = val("dest") === "HOURLY" ? "block" : "none";
+      requestQuote();
+    });
+  });
+
+  /* ---------- input niceties ---------- */
+  $("cc").addEventListener("input", function (e) {
+    var v = e.target.value.replace(/\D/g, "").slice(0, 19);
+    e.target.value = v.replace(/(.{4})/g, "$1 ").trim();
+  });
+  $("exp").addEventListener("input", function (e) {
+    var v = e.target.value.replace(/\D/g, "").slice(0, 4);
+    e.target.value = v.length > 2 ? v.slice(0, 2) + "/" + v.slice(2) : v;
+  });
+  $("cvv").addEventListener("input", function (e) {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4);
+  });
+
+  /* ---------- submit ---------- */
+  function validate() {
+    var errs = [];
+    [["dest", "destination"], ["pickup", "pickup address"], ["dropoff", "drop-off"],
+     ["date", "date"], ["time", "time"], ["name", "name"], ["phone", "phone"], ["email", "email"]]
+      .forEach(function (p) {
+        var bad = !val(p[0]); mark(p[0], bad); if (bad) errs.push(p[1]);
+      });
+
+    if (val("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val("email"))) {
+      mark("email", true); errs.push("a valid email");
+    }
+    var cc = val("cc").replace(/\s/g, "");
+    if (cc.length < 13) { mark("cc", true); errs.push("card number"); } else mark("cc", false);
+    if (!/^\d{2}\/\d{2}$/.test(val("exp"))) { mark("exp", true); errs.push("expiry"); } else mark("exp", false);
+    if (val("cvv").length < 3) { mark("cvv", true); errs.push("CVV"); } else mark("cvv", false);
+    if (!val("zip")) { mark("zip", true); errs.push("billing ZIP"); } else mark("zip", false);
+
+    if (!$("terms").checked) errs.push("agreement to the terms");
+    if (AVAIL && !AVAIL.available) errs.push("an available pickup time");
+
+    return errs;
+  }
+
+  $("submit").addEventListener("click", function () {
+    if (busy) return;
+    $("formErr").textContent = "";
+    var errs = validate();
+    if (errs.length) {
+      $("formErr").textContent = "Please check: " + errs.join(", ") + ".";
+      return;
+    }
+
+    busy = true;
+    $("submit").disabled = true;
+    $("submit").textContent = "Securing your card…";
+
+    // Step 1: card -> Authorize.net directly. Our server never sees it.
+    var exp = val("exp").split("/");
+    Accept.dispatchData({
+      authData: { clientKey: CFG.payments.clientKey, apiLoginID: CFG.payments.apiLoginId },
+      cardData: {
+        cardNumber: val("cc").replace(/\s/g, ""),
+        month: exp[0], year: exp[1],
+        cardCode: val("cvv"), zip: val("zip")
+      }
+    }, function (resp) {
+      if (resp.messages.resultCode !== "Ok") {
+        var m = resp.messages.message[0];
+        fail(cardMessage(m.code, m.text));
+        return;
+      }
+      sendBooking(resp.opaqueData);
+    });
+  });
+
+  function cardMessage(code, text) {
+    if (/E_WC_05|number/i.test(code + text)) return "That card number doesn't look right. Please check it.";
+    if (/E_WC_06|E_WC_07|E_WC_08|expir/i.test(code + text)) return "Please check the expiry date.";
+    if (/E_WC_15|E_WC_16|code/i.test(code + text)) return "Please check the CVV.";
+    return "We couldn't verify that card. Please check the details and try again.";
+  }
+
+  function fail(msg) {
+    busy = false;
+    $("submit").disabled = false;
+    $("submit").textContent = "Confirm booking";
+    $("formErr").textContent = msg;
+  }
+
+  function sendBooking(opaque) {
+    $("submit").textContent = "Confirming…";
+    var body = {
+      destCode: val("dest"),
+      pickup: val("pickup"), dropoff: val("dropoff"),
+      date: val("date"), time: val("time"),
+      passengers: val("pax"),
+      flightNumber: val("flight") || null,
+      notes: val("notes"),
+      name: val("name"), phone: val("phone"), email: val("email"),
+      billingZip: val("zip"),
+      termsAccepted: true,
+      company: val("company"),
+      opaqueDataDescriptor: opaque.dataDescriptor,
+      opaqueDataValue: opaque.dataValue
+    };
+    if (val("dest") === "HOURLY") body.hours = Number(val("hours")) || 3;
+
+    var ctl = new AbortController();
+    var to = setTimeout(function () { ctl.abort(); }, 20000);
+
+    fetch(API + "/api/book", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body), signal: ctl.signal
+    }).then(function (r) {
+      clearTimeout(to);
+      return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+    }).then(function (res) {
+      if (!res.ok) {
+        if (res.j.alternatives && res.j.alternatives.length) {
+          fail(res.j.error + " Try: " + res.j.alternatives.map(function (a) { return a.pretty; }).join(", "));
+        } else fail(res.j.error || "Something went wrong. Please call 848-667-0999.");
+        return;
+      }
+      showDone(res.j, body);
+    }).catch(function (e) {
+      clearTimeout(to);
+      fail(e.name === "AbortError"
+        ? "That took too long. Please call 848-667-0999 — do not re-enter your card."
+        : "We couldn't reach the booking system. Please call 848-667-0999.");
+    });
+  }
+
+  function showDone(j, body) {
+    $("form-wrap").style.display = "none";
+    $("done").style.display = "block";
+    $("doneSub").textContent = "A confirmation is on its way to " + body.email + ".";
+    var rows = [
+      ["Pickup", body.date + " at " + body.time],
+      ["From", body.pickup],
+      ["To", body.dropoff],
+      ["Flat rate", money(j.quote.base)],
+      ["Gratuity", money(j.quote.gratuity)],
+      ["Total", money(j.quote.total)],
+      ["Charged today", "$0.00"],
+      ["Card charges", j.chargeOn || "the day before"]
+    ];
+    if (j.card) rows.push(["Card on file", j.card.brand + " ending " + j.card.last4]);
+    $("doneRecap").innerHTML = rows.map(function (r) {
+      return '<div class="r"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>';
+    }).join("");
+    $("manageLink").href = j.manageUrl;
+    window.scrollTo(0, 0);
+  }
+})();
+</script>
+</body>
+</html>
