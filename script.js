@@ -88,6 +88,7 @@
 
   if (form) {
     var CFG = null, AVAIL = null, busy = false;
+    var TIP = { pct: null, amount: null, touched: false };
 
     function $(id) { return document.getElementById(id); }
     function val(id) { var el = $(id); return el ? (el.value || "").trim() : ""; }
@@ -143,6 +144,8 @@
           String(earliest.getMonth() + 1).padStart(2, "0") + "-" +
           String(earliest.getDate()).padStart(2, "0");
 
+        if (c.tip && c.tip.enabled && !TIP.touched) TIP.pct = c.tip.defaultPct;
+
         if (!c.payments || !c.payments.enabled) {
           formError("Online booking is temporarily unavailable. Please call 848-667-0999 and we'll take care of you.");
           $("submitBtn").disabled = true;
@@ -164,6 +167,8 @@
 
       var body = { destCode: dest, date: val("date") || null, time: val("time") || null };
       if (dest === "HOURLY") body.hours = Number(val("hours")) || 3;
+      if (TIP.amount != null) body.tipAmount = TIP.amount;
+      else if (TIP.pct != null) body.tipPct = TIP.pct;
 
       fetch(API + "/api/quote", {
         method: "POST",
@@ -174,7 +179,12 @@
         .then(function (j) {
           if (j.error) { panel.hidden = true; return; }
           AVAIL = j.availability;
-          if (j.chargeOn) $("chargeWhen").textContent = "on " + j.chargeOn;
+          var cw = $("chargeWhen");
+          if (cw) {
+            cw.textContent = (CFG && CFG.chargeAtBooking)
+              ? "when you confirm this booking"
+              : (j.chargeOn ? "on " + j.chargeOn : "24 hours before your ride");
+          }
           renderQuote(j);
         })
         .catch(function () { panel.hidden = true; });
@@ -182,10 +192,26 @@
 
     function renderQuote(j) {
       var q = j.quote, panel = $("quotePanel");
+      var tipCfg = (CFG && CFG.tip) || { enabled: false, options: [] };
+
       var html =
-        '<div class="q-line"><span>' + q.label + '</span><span>' + money(q.base) + '</span></div>' +
-        '<div class="q-line"><span>Gratuity (' + q.gratuityPct + '%)</span><span>' + money(q.gratuity) + '</span></div>' +
-        '<div class="q-line q-total"><span>Total</span><span>' + money(q.total) + '</span></div>';
+        '<div class="q-line"><span>' + q.label + '</span><span>' + money(q.base) + '</span></div>';
+
+      if (tipCfg.enabled) {
+        html += '<div class="q-tip"><div class="q-tip-label">Add a tip for your driver</div><div class="q-tip-opts">';
+        tipCfg.options.forEach(function (pct) {
+          var on = (TIP.amount == null && TIP.pct === pct);
+          html += '<button type="button" class="q-tip-btn' + (on ? " on" : "") + '" data-pct="' + pct + '">' + pct + '%</button>';
+        });
+        var otherOn = TIP.amount != null;
+        var noneOn = TIP.amount == null && TIP.pct == null;
+        html += '<button type="button" class="q-tip-btn' + (otherOn ? " on" : "") + '" data-other="1">Other</button>';
+        html += '<button type="button" class="q-tip-btn' + (noneOn ? " on" : "") + '" data-none="1">No tip</button>';
+        html += '</div></div>';
+        html += '<div class="q-line"><span>Tip</span><span>' + money(q.tip || 0) + '</span></div>';
+      }
+
+      html += '<div class="q-line q-total"><span>Total</span><span>' + money(q.total) + '</span></div>';
 
       if (j.availability) {
         if (j.availability.available) {
@@ -203,7 +229,7 @@
         }
       }
       html += '<p class="q-note">Tolls and airport parking are added at cost after your ride. ' +
-              'Nothing is charged today.</p>';
+              'You can also add or increase the tip after your trip.</p>';
 
       panel.innerHTML = html;
       panel.hidden = false;
@@ -211,6 +237,24 @@
       Array.prototype.forEach.call(panel.querySelectorAll(".q-alts button"), function (b) {
         b.addEventListener("click", function () {
           $("time").value = b.getAttribute("data-t");
+          requestQuote();
+        });
+      });
+
+      Array.prototype.forEach.call(panel.querySelectorAll(".q-tip-btn"), function (b) {
+        b.addEventListener("click", function () {
+          TIP.touched = true;
+          if (b.getAttribute("data-none")) { TIP.pct = null; TIP.amount = null; }
+          else if (b.getAttribute("data-other")) {
+            var v = window.prompt("Tip amount in dollars", q.tip ? String(q.tip) : "");
+            if (v === null) return;
+            var n = Number(String(v).replace(/[^0-9.]/g, ""));
+            if (!(n > 0)) { TIP.pct = null; TIP.amount = null; }
+            else { TIP.amount = n; TIP.pct = null; }
+          } else {
+            TIP.pct = Number(b.getAttribute("data-pct"));
+            TIP.amount = null;
+          }
           requestQuote();
         });
       });
@@ -383,6 +427,8 @@
         opaqueDataValue: opaque.dataValue
       };
       if (val("dest") === "HOURLY") payload.hours = Number(val("hours")) || 3;
+      if (TIP.amount != null) payload.tipAmount = TIP.amount;
+      else if (TIP.pct != null) payload.tipPct = TIP.pct;
 
       var controller = ("AbortController" in window) ? new AbortController() : null;
       var timedOut = false;
@@ -427,12 +473,10 @@
         ["Pickup", payload.date + " at " + payload.time],
         ["From", payload.pickup],
         ["To", payload.dropoff],
-        ["Flat rate", money(j.quote.base)],
-        ["Gratuity", money(j.quote.gratuity)],
-        ["Total", money(j.quote.total)],
-        ["Charged today", "$0.00"],
-        ["Card charges", j.chargeOn || "the day before your ride"]
+        ["Fare", money(j.quote.base)]
       ];
+      if (j.quote.tip > 0) rows.push(["Tip", money(j.quote.tip)]);
+      rows.push(["Total charged", money(j.quote.total)]);
       if (j.card) rows.push(["Card on file", j.card.brand + " ending " + j.card.last4]);
 
       document.getElementById("successSub").textContent =

@@ -13,6 +13,7 @@ const W = new URL("..", import.meta.url).pathname;
 const { handleBook, handleQuote, handleConfig, handleExtras, handleManageCancel, handleManageGet } =
   await import(`${W}/api.js`);
 const { runScheduled, runDigest } = await import(`${W}/cron.js`);
+const { handleManageTip, handleOwnerTip } = await import(`${W}/api.js`);
 const { handleReserve } = await import(`${W}/worker.js`);
 const { chargeProfile, createProfileFromNonce } = await import(`${W}/authnet.js`);
 const { localToUtc, utcToLocal, loadSettings, checkAvailability, quoteFor, getRate } =
@@ -43,6 +44,16 @@ async function newEnv() {
   return { env: makeEnv(DB), db };
 }
 
+
+/* Revert a booking to the pre-charge state so the T-24h sweep — now a
+   fallback path rather than the normal one — can still be exercised. */
+function awaitSweep(db, id, chargeAfterUtc) {
+  db.prepare(`UPDATE bookings SET payment_status='card_on_file', amount_charged=0,
+              charged_at=NULL, paid=0, charge_attempts=0, last_charge_error=NULL,
+              charge_after_utc=? WHERE id=?`).run(chargeAfterUtc, id);
+  db.prepare("DELETE FROM charges WHERE booking_id=?").run(id);
+}
+
 /* =========================================================
    A. SCHEMA
    ========================================================= */
@@ -53,12 +64,15 @@ section("A. Schema and seed data");
   check("8 rates seeded", rates.n, 8);
 
   const pbi = db.prepare("SELECT price, hours_engaged FROM rates WHERE code='PBI'").get();
-  check("PBI is $75 / 2.0h", [pbi.price, pbi.hours_engaged], [75, 2]);
+  check("PBI is $80 / 2.0h", [pbi.price, pbi.hours_engaged], [80, 2]);
   const mco = db.prepare("SELECT price FROM rates WHERE code='MCO'").get();
-  check("MCO is $235", mco.price, 235);
+  check("MCO is $200", mco.price, 200);
 
   const s = await loadSettings(env);
-  check("gratuity 20%", s.gratuityPct, 20);
+  check("no auto-gratuity", s.gratuityPct, 0);
+  check("tip default 20%", s.tipDefaultPct, 20);
+  check("tip options", s.tipOptions, [20, 22.5, 25, 30]);
+  check("charges at booking", s.chargeAtBooking, true);
   check("charge lead 24h", s.chargeLeadHours, 24);
   check("timezone", s.tz, TZ);
 
@@ -77,7 +91,7 @@ section("B. Quoting");
   const { env } = await newEnv();
   const r = await handleQuote(req({ destCode: "MIA", date: futureDate(20), time: "09:00" }), env, CORS);
   const j = await r.json();
-  check("MIA quote 195 + 39 = 234", [j.quote.base, j.quote.gratuity, j.quote.total], [195, 39, 234]);
+  check("MIA fare only, no auto tip", [j.quote.base, j.quote.tip, j.quote.total], [200, 0, 200]);
   ok("MIA slot available", j.availability.available === true);
   ok("charge date returned", typeof j.chargeOn === "string" && j.chargeOn.length > 0);
 
@@ -86,7 +100,7 @@ section("B. Quoting");
 
   const hourly = await handleQuote(req({ destCode: "HOURLY", hours: 5 }), env, CORS);
   const hj = await hourly.json();
-  check("hourly 5h = 400 + 80", [hj.quote.base, hj.quote.total], [400, 480]);
+  check("hourly 5h = 400, no auto tip", [hj.quote.base, hj.quote.total], [400, 400]);
 }
 
 /* =========================================================
@@ -101,19 +115,18 @@ section("C. Booking");
 
   check("booking succeeds", res.status, 200);
   ok("confirmed", j.confirmed === true);
-  check("total 234", j.quote.total, 234);
+  check("total 200 (no tip chosen)", j.quote.total, 200);
   ok("manage url issued", /manage\.html\?t=[a-f0-9]{32}/.test(j.manageUrl));
   check("card described", j.card.last4, "1111");
 
   const row = db.prepare("SELECT * FROM bookings WHERE id=?").get(j.bookingId);
   check("status confirmed", row.status, "confirmed");
-  check("payment card_on_file", row.payment_status, "card_on_file");
-  check("nothing charged yet", row.amount_charged, 0);
+  check("charged at booking", row.payment_status, "charged");
+  check("full amount captured", row.amount_charged, 200);
   ok("payment profile stored", !!row.anet_payment_profile_id);
   ok("terms timestamped", !!row.terms_accepted_at);
   ok("block window set", row.block_start_utc < row.ride_start_utc && row.block_end_utc > row.ride_start_utc);
-  check("charge_after is T-24h",
-    (row.ride_start_utc - row.charge_after_utc) / 3600000, 24);
+  check("no pending T-24h charge", row.charge_after_utc, null);
 
   const cust = db.prepare("SELECT * FROM customers WHERE id=?").get(row.customer_id);
   ok("customer vault id stored", !!cust.anet_customer_profile_id);
@@ -246,6 +259,8 @@ section("F. Charge sweep");
   const r = await handleBook(req(booking({ date: futureDate(30), time: "05:00" })), env, CORS, ctx);
   const j = await r.json();
 
+  awaitSweep(db, j.bookingId, Date.now() + 48 * 3600000);   // due in the future
+
   // Not yet due.
   const early = await runScheduled(env, ctx);
   check("does not charge before T-24h", [early.charged, early.declined], [0, 0]);
@@ -259,13 +274,13 @@ section("F. Charge sweep");
   check("charges once due", run1.charged, 1);
   const row = db.prepare("SELECT * FROM bookings WHERE id=?").get(j.bookingId);
   check("marked charged", row.payment_status, "charged");
-  check("amount recorded", row.amount_charged, 234);
+  check("amount recorded", row.amount_charged, 200);
   check("paid flag set", row.paid, 1);
   ok("charged_at stamped", !!row.charged_at);
 
   const led = db.prepare("SELECT * FROM charges WHERE booking_id=?").all(j.bookingId);
   check("one ledger entry", led.length, 1);
-  check("ledger amount", led[0].amount, 234);
+  check("ledger amount", led[0].amount, 200);
   check("ledger ok", led[0].status, "ok");
   ok("transaction id captured", !!led[0].anet_trans_id);
 
@@ -273,7 +288,7 @@ section("F. Charge sweep");
   const run2 = await runScheduled(env, ctx);
   check("idempotent — no second charge", run2.charged, 0);
   check("amount unchanged",
-    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 234);
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 200);
 
   ok("charge flagged as merchant-initiated",
     anet.calls.some((c) => c.kind === "createTransactionRequest" &&
@@ -287,14 +302,14 @@ section("F. Charge sweep");
   const ctx = makeCtx();
   const r = await handleBook(req(booking({ date: futureDate(31) })), env, CORS, ctx);
   const j = await r.json();
-  db.prepare("UPDATE bookings SET charge_after_utc=? WHERE id=?").run(Date.now() - 1000, j.bookingId);
+  awaitSweep(db, j.bookingId, Date.now() - 1000);
 
   const [a, b] = await Promise.all([runScheduled(env, ctx), runScheduled(env, ctx)]);
   check("exactly one sweep charged", a.charged + b.charged, 1);
   check("card charged exactly once",
     db.prepare("SELECT COUNT(*) n FROM charges WHERE booking_id=? AND kind='fare' AND status='ok'").get(j.bookingId).n, 1);
   check("amount is single fare",
-    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 234);
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 200);
 }
 
 {
@@ -303,7 +318,7 @@ section("F. Charge sweep");
   const ctx = makeCtx();
   const r = await handleBook(req(booking({ date: futureDate(32) })), env, CORS, ctx);
   const j = await r.json();
-  db.prepare("UPDATE bookings SET charge_after_utc=? WHERE id=?").run(Date.now() - 1000, j.bookingId);
+  awaitSweep(db, j.bookingId, Date.now() - 1000);
 
   anet.nextCharge = RESPONSES.declined;
   const d1 = await runScheduled(env, ctx);
@@ -374,12 +389,12 @@ async function bookAt(env, ctx, hoursFromNow, dest = "MIA") {
 
   const c = await handleManageCancel(req({ token }), env, CORS, ctx);
   const cj = await c.json();
-  check("free cancellation charges nothing", cj.charged, 0);
-  check("nothing refunded", cj.refunded, 0);
+  check("free cancellation keeps nothing", cj.charged, 0);
+  check("full amount refunded", cj.refunded, 200);
   check("marked canceled",
     db.prepare("SELECT status s FROM bookings WHERE id=?").get(j.bookingId).s, "canceled");
-  check("no charge attempted",
-    db.prepare("SELECT COUNT(*) n FROM charges WHERE booking_id=?").get(j.bookingId).n, 0);
+  check("refund recorded in ledger",
+    db.prepare("SELECT COUNT(*) n FROM charges WHERE booking_id=? AND kind='refund'").get(j.bookingId).n, 1);
 }
 
 {
@@ -394,11 +409,10 @@ async function bookAt(env, ctx, hoursFromNow, dest = "MIA") {
 
   const c = await handleManageCancel(req({ token }), env, CORS, ctx);
   const cj = await c.json();
-  check("50% fee charged on late cancel", cj.charged, 117);
-  check("ledger records the cancellation fee",
-    db.prepare("SELECT kind, amount FROM charges WHERE booking_id=?").get(j.bookingId).kind, "cancellation");
+  check("50% kept on late cancel", cj.charged, 100);
+  check("half refunded", cj.refunded, 100);
   check("booking shows amount kept",
-    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 117);
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 100);
 }
 
 {
@@ -410,11 +424,11 @@ async function bookAt(env, ctx, hoursFromNow, dest = "MIA") {
   db.prepare("UPDATE bookings SET charge_after_utc=? WHERE id=?").run(Date.now() - 1000, j.bookingId);
   await runScheduled(env, ctx);
   check("charged before cancelling",
-    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 234);
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 200);
 
   const c = await handleManageCancel(req({ token }), env, CORS, ctx);
   const cj = await c.json();
-  check("full refund issued", cj.refunded, 234);
+  check("full refund issued", cj.refunded, 200);
   check("nothing kept", cj.charged, 0);
   check("balance zeroed",
     db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 0);
@@ -459,7 +473,7 @@ section("I. Extras");
   check("extras computed correctly", rj.amount, 63.5);
   check("booking extras total", db.prepare("SELECT extras_total e FROM bookings WHERE id=?").get(j.bookingId).e, 63.5);
   check("running total includes extras",
-    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 297.5);
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(j.bookingId).a, 263.5);
   check("extras in ledger",
     db.prepare("SELECT COUNT(*) n FROM charges WHERE booking_id=? AND kind='extras'").get(j.bookingId).n, 1);
 
@@ -492,7 +506,7 @@ section("J. Daily digest");
 
   const d = await runDigest(env);
   ok("digest runs without error", typeof d === "object");
-  check("digest counts collected", d.collected, 234);
+  check("digest counts collected", d.collected, 200);
   ok("digest sees tomorrow's ride", d.tomorrow + d.today >= 1, JSON.stringify(d));
 }
 
@@ -572,6 +586,99 @@ section("L. Audit regressions");
     db.prepare("SELECT status s FROM bookings WHERE id=?").get(j.bookingId).s, "confirmed");
   const cj = await c.json();
   ok("customer told to retry", /try again/i.test(cj.error), cj.error);
+}
+
+
+/* =========================================================
+   M. TIPS — optional, never folded into the fare
+   ========================================================= */
+section("M. Tips");
+{
+  const { env, db } = await newEnv();
+  const ctx = makeCtx();
+
+  // No tip chosen -> the customer pays exactly the advertised fare.
+  const plain = await handleBook(req(booking({ destCode: "MCO", date: futureDate(70), time: "05:00" })), env, CORS, ctx);
+  const pj = await plain.json();
+  check("no tip -> fare only", [pj.quote.base, pj.quote.tip, pj.quote.total], [200, 0, 200]);
+  check("charged exactly the fare",
+    db.prepare("SELECT amount_charged a FROM bookings WHERE id=?").get(pj.bookingId).a, 200);
+  check("tip column zero",
+    db.prepare("SELECT tip_amount t FROM bookings WHERE id=?").get(pj.bookingId).t, 0);
+}
+
+{
+  const { env, db } = await newEnv();
+  const ctx = makeCtx();
+  const r = await handleBook(req(booking({ destCode: "MCO", tipPct: 22.5, date: futureDate(71), time: "05:00" })), env, CORS, ctx);
+  const j = await r.json();
+  check("22.5% tip on $200 = $45", [j.quote.base, j.quote.tip, j.quote.total], [200, 45, 245]);
+  const row = db.prepare("SELECT tip_amount, tip_pct, amount_charged FROM bookings WHERE id=?").get(j.bookingId);
+  check("tip stored separately", [row.tip_amount, row.tip_pct], [45, 22.5]);
+  check("one charge for fare+tip", row.amount_charged, 245);
+  check("single transaction, not two",
+    db.prepare("SELECT COUNT(*) n FROM charges WHERE booking_id=?").get(j.bookingId).n, 1);
+}
+
+{
+  // Every option Matt asked for lands on a clean number.
+  const { env } = await newEnv();
+  const ctx = makeCtx();
+  const expected = { 20: 240, 22.5: 245, 25: 250, 30: 260 };
+  for (const pct of [20, 22.5, 25, 30]) {
+    const r = await handleQuote(req({ destCode: "MCO", tipPct: pct }), env, CORS);
+    const j = await r.json();
+    check(`${pct}% -> $${expected[pct]}`, j.quote.total, expected[pct]);
+  }
+}
+
+{
+  // Customer adds a tip AFTER the ride, from their receipt link.
+  const { env, db } = await newEnv();
+  const ctx = makeCtx();
+  const r = await handleBook(req(booking({ destCode: "PBI", date: futureDate(72), time: "09:00" })), env, CORS, ctx);
+  const j = await r.json();
+  const token = db.prepare("SELECT manage_token t FROM bookings WHERE id=?").get(j.bookingId).t;
+  check("PBI fare charged", j.quote.total, 80);
+
+  const t = await handleManageTip(req({ token, amount: 20 }), env, CORS, ctx);
+  const tj = await t.json();
+  check("post-ride tip charged", tj.amount, 20);
+  const row = db.prepare("SELECT tip_amount, amount_charged, tip_added_after FROM bookings WHERE id=?").get(j.bookingId);
+  check("tip recorded", [row.tip_amount, row.amount_charged], [20, 100]);
+  check("flagged as added later", row.tip_added_after, 1);
+
+  // Customer is present -> NOT a merchant-initiated transaction.
+  const last = anet.calls.filter(c => c.kind === "createTransactionRequest").pop();
+  ok("customer tip carries no delayedCharge reason",
+    !last.body.transactionRequest.subsequentAuthInformation);
+
+  // Matt adds one from the admin -> merchant-initiated.
+  const o = await handleOwnerTip(req({ amount: 15 }), env, CORS, j.bookingId, ctx);
+  check("owner tip charged", (await o.json()).amount, 15);
+  const ownerCall = anet.calls.filter(c => c.kind === "createTransactionRequest").pop();
+  check("owner tip flagged delayedCharge",
+    ownerCall.body.transactionRequest.subsequentAuthInformation.reason, "delayedCharge");
+  check("tips accumulate",
+    db.prepare("SELECT tip_amount t FROM bookings WHERE id=?").get(j.bookingId).t, 35);
+}
+
+{
+  // Guards: a tip must never reduce the fare or run away.
+  const { env } = await newEnv();
+  const ctx = makeCtx();
+  const neg = await handleQuote(req({ destCode: "MCO", tipPct: -50 }), env, CORS);
+  check("negative tip ignored", (await neg.json()).quote.total, 200);
+
+  const huge = await handleQuote(req({ destCode: "MCO", tipAmount: 999999 }), env, CORS);
+  check("absurd tip capped at 2x fare", (await huge.json()).quote.total, 600);
+
+  const r = await handleBook(req(booking({ destCode: "PBI", date: futureDate(73), time: "09:00" })), env, CORS, ctx);
+  const j = await r.json();
+  const bad = await handleOwnerTip(req({ amount: 5000 }), env, CORS, j.bookingId, ctx);
+  check("runaway post-ride tip refused", bad.status, 422);
+  const zero = await handleOwnerTip(req({ amount: 0 }), env, CORS, j.bookingId, ctx);
+  check("zero tip refused", zero.status, 422);
 }
 
 /* ---------- summary ---------- */

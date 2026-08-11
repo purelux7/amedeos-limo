@@ -48,6 +48,12 @@ export async function handleConfig(env, cors) {
         hours: r.hours_engaged,
       })),
       gratuityPct: settings.gratuityPct,
+      tip: {
+        enabled: settings.tipEnabled,
+        defaultPct: settings.tipDefaultPct,
+        options: settings.tipOptions,
+      },
+      chargeAtBooking: settings.chargeAtBooking,
       minLeadHours: settings.minLeadHours,
       maxAdvanceDays: settings.maxAdvanceDays,
       dayStart: settings.dayStart,
@@ -85,7 +91,7 @@ export async function handleQuote(request, env, cors) {
   const rate = await getRate(env, d.destCode);
   if (!rate) return json({ error: "Pick a destination." }, 422, cors);
 
-  const quote = quoteFor(rate, settings, { hours: d.hours });
+  const quote = quoteFor(rate, settings, { hours: d.hours, tipPct: d.tipPct, tipAmount: d.tipAmount });
 
   if (!d.date || !d.time) {
     return json({ quote, availability: null }, 200, cors);
@@ -160,7 +166,7 @@ export async function handleBook(request, env, cors, ctx) {
   const rate = await getRate(env, d.destCode);
   if (!rate) return json({ error: "That destination isn't available." }, 422, cors);
 
-  const quote = quoteFor(rate, settings, { hours: d.hours });
+  const quote = quoteFor(rate, settings, { hours: d.hours, tipPct: d.tipPct, tipAmount: d.tipAmount });
   const rideStartUtc = localToUtc(d.date, d.time, settings.tz);
 
   // --- 1. pre-check -------------------------------------------------
@@ -187,17 +193,17 @@ export async function handleBook(request, env, cors, ctx) {
     `INSERT INTO bookings
        (customer_id, service, dest_code, direction, pickup, dropoff, ride_date, ride_time,
         passengers, notes, flight_number, source, status,
-        quoted_base, quoted_gratuity, quoted_total, hours_engaged,
+        quoted_base, quoted_gratuity, quoted_total, hours_engaged, tip_amount, tip_pct,
         ride_start_utc, block_start_utc, block_end_utc, charge_after_utc,
         payment_status, manage_token, terms_accepted_at, terms_ip)
      VALUES (?,?,?,?,?,?,?,?,?,?,?, 'website', 'new',
-             ?,?,?,?,?,?,?,?, 'none', ?, datetime('now'), ?)`
+             ?,?,?,?,?,?,?,?,?,?, 'none', ?, datetime('now'), ?)`
   )
     .bind(
       customerId, rate.label, rate.code, d.direction || null,
       d.pickup, d.dropoff, d.date, d.time,
       d.passengers, d.notes || "", d.flightNumber || null,
-      quote.base, quote.gratuity, quote.total, quote.hoursEngaged,
+      quote.base, quote.gratuity, quote.total, quote.hoursEngaged, quote.tip, quote.tipPct,
       rideStartUtc, blockStart, blockEnd, chargeAfter,
       token, ip
     )
@@ -284,6 +290,49 @@ export async function handleBook(request, env, cors, ctx) {
       ).bind(paymentProfileId, settings.autoConfirm ? "confirmed" : "new", bookingId).run();
 
       card = await describeCard(env, { customerProfileId: profileId, paymentProfileId });
+
+      // Matt takes payment at booking rather than at T-24h. This is a
+      // CARDHOLDER-initiated transaction — they are sitting there submitting
+      // the form — so it must NOT carry the merchant-initiated flag. Only the
+      // later charges (extras, tips added afterwards) are merchant-initiated.
+      if (settings.chargeAtBooking) {
+        const paid = await chargeProfile(env, {
+          customerProfileId: profileId,
+          paymentProfileId,
+          amount: quote.total,
+          invoiceNumber: `R${bookingId}`,
+          description: `Car service ${d.date} — ${d.dropoff}`.slice(0, 255),
+        });
+
+        await logCharge(
+          env, bookingId, "fare", quote.total,
+          paid.ok ? "ok" : paid.declined ? "declined" : "error",
+          paid.transId, paid.code, paid.message
+        );
+
+        if (!paid.ok) {
+          // Nothing was captured. Release the slot rather than hold it with a
+          // booking that was never paid for.
+          await env.DB.prepare(`DELETE FROM bookings WHERE id = ?`).bind(bookingId).run();
+          return json(
+            {
+              error: paid.declined
+                ? "That card was declined. Please try another card."
+                : "We couldn't complete the payment. Please try another card or call 848-667-0999.",
+              field: "card",
+            },
+            402,
+            cors
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE bookings
+              SET payment_status = 'charged', charged_at = datetime('now'),
+                  amount_charged = ?, paid = 1, charge_after_utc = NULL
+            WHERE id = ?`
+        ).bind(quote.total, bookingId).run();
+      }
     } catch (e) {
       // Card failed. Release the slot rather than hold it with an unpayable booking.
       await env.DB.prepare(`DELETE FROM bookings WHERE id = ?`).bind(bookingId).run();
@@ -669,4 +718,104 @@ export async function upsertCustomer(env, name, email, phone) {
   const res = await env.DB.prepare(`INSERT INTO customers (name, email, phone) VALUES (?,?,?)`)
     .bind(name, e, p).run();
   return res.meta.last_row_id;
+}
+
+
+/* ------------------------------------------------------------
+   Adding a tip AFTER the ride.
+
+   Two callers, and the difference matters to the card networks:
+     * the customer, from their receipt link — they are present, so this
+       is a CARDHOLDER-initiated transaction and carries no MIT flag
+     * Matt, from the admin — the customer is not present, so it is a
+       merchant-initiated "delayedCharge"
+   ------------------------------------------------------------ */
+async function chargeTip(env, booking, amount, byOwner, ctx) {
+  const settings = await loadSettings(env);
+  const tip = money(amount);
+
+  if (!(tip > 0)) return { status: 422, body: { error: "Enter a tip amount." } };
+  if (tip > 1000) return { status: 422, body: { error: "That tip is unusually large — please call us to arrange it." } };
+  if (!anetConfigured(env) || !booking.anet_payment_profile_id || !booking.anet_customer_profile_id) {
+    return { status: 400, body: { error: "There's no card on file for this booking." } };
+  }
+
+  const res = await chargeProfile(env, {
+    customerProfileId: booking.anet_customer_profile_id,
+    paymentProfileId: booking.anet_payment_profile_id,
+    amount: tip,
+    invoiceNumber: `T${booking.id}`,
+    description: "Gratuity",
+    ...(byOwner ? { cofReason: "delayedCharge" } : {}),
+  });
+
+  await logCharge(
+    env, booking.id, "tip", tip,
+    res.ok ? "ok" : res.declined ? "declined" : "error",
+    res.transId, res.code, res.message
+  );
+
+  if (!res.ok) {
+    return {
+      status: 402,
+      body: { error: res.declined ? "That card was declined." : "We couldn't process that tip." },
+    };
+  }
+
+  await env.DB.prepare(
+    `UPDATE bookings
+        SET tip_amount = tip_amount + ?, amount_charged = amount_charged + ?, tip_added_after = 1
+      WHERE id = ?`
+  ).bind(tip, tip, booking.id).run();
+
+  const when = utcToLocal(booking.ride_start_utc, settings.tz);
+  const mail = sendReceipt(env, {
+    booking: { ...booking, email: booking.customer_email, extras_note: "Gratuity" },
+    amount: tip,
+    when,
+    transId: res.transId,
+    kind: "extras",
+  });
+  if (ctx && ctx.waitUntil) ctx.waitUntil(mail);
+
+  return { status: 200, body: { ok: true, amount: tip, transId: res.transId } };
+}
+
+/** POST /api/manage/tip — the customer adding a tip from their receipt. */
+export async function handleManageTip(request, env, cors, ctx) {
+  const d = await request.json().catch(() => ({}));
+  const b = await env.DB.prepare(
+    `SELECT b.*, c.email AS customer_email, c.anet_customer_profile_id
+       FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id
+      WHERE b.manage_token = ? LIMIT 1`
+  ).bind(String(d.token || "")).first();
+
+  if (!b) return json({ error: "Booking not found." }, 404, cors);
+  if (b.status === "canceled") return json({ error: "That booking was canceled." }, 400, cors);
+
+  const amount = Number(d.amount) > 0
+    ? Number(d.amount)
+    : (Number(d.pct) > 0 ? (Number(b.quoted_base) * Number(d.pct)) / 100 : 0);
+
+  const out = await chargeTip(env, b, amount, false, ctx);
+  return json(out.body, out.status, cors);
+}
+
+/** POST /api/bookings/:id/tip — Matt adding a tip from the admin. */
+export async function handleOwnerTip(request, env, cors, bookingId, ctx) {
+  const d = await request.json().catch(() => ({}));
+  const b = await env.DB.prepare(
+    `SELECT b.*, c.email AS customer_email, c.anet_customer_profile_id
+       FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id
+      WHERE b.id = ?`
+  ).bind(bookingId).first();
+
+  if (!b) return json({ error: "Booking not found" }, 404, cors);
+
+  const amount = Number(d.amount) > 0
+    ? Number(d.amount)
+    : (Number(d.pct) > 0 ? (Number(b.quoted_base) * Number(d.pct)) / 100 : 0);
+
+  const out = await chargeTip(env, b, amount, true, ctx);
+  return json(out.body, out.status, cors);
 }

@@ -114,7 +114,14 @@ export async function loadSettings(env) {
 
   return {
     tz: raw.timezone || "America/New_York",
-    gratuityPct: num("gratuity_pct", 20),
+    gratuityPct: num("gratuity_pct", 0),
+    // Tips are NOT folded into the fare. The fare is the fare; the tip is a
+    // separate, removable line the customer chooses at booking.
+    tipEnabled: raw.tip_enabled !== "0",
+    tipDefaultPct: num("tip_default_pct", 20),
+    tipOptions: String(raw.tip_options || "20,22.5,25,30")
+      .split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0),
+    chargeAtBooking: raw.charge_at_booking === "1",
     chargeLeadHours: num("charge_lead_hours", 24),
     freeCancelHours: num("free_cancel_hours", 24),
     halfCancelHours: num("half_cancel_hours", 4),
@@ -172,8 +179,28 @@ export function quoteFor(rate, settings, opts = {}) {
   const isHourly = rate.code === "HOURLY";
 
   const base = money(isHourly ? rate.price * hours : rate.price);
+
+  // Any gratuity still configured as auto-added (legacy). Normally zero —
+  // Matt's instruction was that the price must not include a tip.
   const gratuity = money(base * (settings.gratuityPct / 100));
-  const total = money(base + gratuity);
+
+  // The tip the customer actually chose. An explicit amount wins over a
+  // percentage so "Other" works; both are clamped so a hostile request
+  // cannot post a negative tip and reduce the fare below the rate.
+  let tip = 0;
+  let tipPct = null;
+  if (settings.tipEnabled) {
+    const amt = Number(opts.tipAmount);
+    const pct = Number(opts.tipPct);
+    if (Number.isFinite(amt) && amt > 0) {
+      tip = money(Math.min(amt, base * 2));
+    } else if (Number.isFinite(pct) && pct > 0) {
+      tipPct = Math.min(pct, 100);
+      tip = money(base * (tipPct / 100));
+    }
+  }
+
+  const total = money(base + gratuity + tip);
   const hoursEngaged = isHourly ? hours : rate.hours_engaged;
 
   return {
@@ -182,6 +209,8 @@ export function quoteFor(rate, settings, opts = {}) {
     base,
     gratuityPct: settings.gratuityPct,
     gratuity,
+    tip,
+    tipPct,
     total,
     hoursEngaged,
     note: "Tolls and airport parking are billed at cost after the ride.",

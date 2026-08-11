@@ -22,6 +22,7 @@ import {
   handleConfig, handleQuote, handleDay, handleBook,
   handleManageGet, handleManageCancel,
   handleBlackouts, handleExtras, handleHealth,
+  handleManageTip, handleOwnerTip,
 } from "./api.js";
 import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
@@ -102,6 +103,9 @@ export default {
       if (path === "/api/manage" && method === "GET") {
         return await handleManageGet(url, env, cors);
       }
+      if (path === "/api/manage/tip" && method === "POST") {
+        return await handleManageTip(request, env, cors, ctx);
+      }
       if (path === "/api/manage/cancel" && method === "POST") {
         return await handleManageCancel(request, env, cors, ctx);
       }
@@ -175,6 +179,11 @@ export default {
 
         if (path === "/api/blackouts" || path.startsWith("/api/blackouts/")) {
           return await handleBlackouts(request, url, env, cors, method);
+        }
+
+        const mTip = path.match(/^\/api\/bookings\/(\d+)\/tip$/);
+        if (mTip && method === "POST") {
+          return await handleOwnerTip(request, env, cors, Number(mTip[1]), ctx);
         }
 
         const mExtras = path.match(/^\/api\/bookings\/(\d+)\/extras$/);

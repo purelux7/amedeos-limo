@@ -36,6 +36,7 @@ export function freshDb() {
   const db = new DatabaseSync(":memory:");
   db.exec(readFileSync(`${WORKER}/schema.sql`, "utf8"));
   db.exec(readFileSync(`${WORKER}/migrations/002_booking_engine.sql`, "utf8"));
+  db.exec(readFileSync(`${WORKER}/migrations/003_matt_rates_and_tips.sql`, "utf8"));
   return { db, DB: new D1(db) };
 }
 
