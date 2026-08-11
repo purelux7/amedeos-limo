@@ -622,3 +622,184 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
   color: #14243d;
 }
 .q-tip-btn:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+
+/* ============================================================
+   MOTION LAYER — slow, weighted reveals in the PureLux register,
+   translated into the navy/gold identity.
+
+   The easing below is the whole character: a long tail that
+   decelerates almost to a stop. Fast easing reads as "web app";
+   this reads as something arriving deliberately.
+   ============================================================ */
+
+:root {
+  --ease-atelier: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-reveal: 1.15s;
+  --stagger: 90ms;
+}
+
+/* Until motion.js runs, nothing is hidden — a JS failure must never
+   leave the page blank. The class is added by the script itself. */
+.motion-ready .reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity var(--dur-reveal) var(--ease-atelier),
+    transform var(--dur-reveal) var(--ease-atelier);
+  transition-delay: calc(var(--i, 0) * var(--stagger));
+  will-change: opacity, transform;
+}
+.motion-ready .reveal.in {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* ---------- masked type: lines rise from behind their own edge ---------- */
+.m-line {
+  display: block;
+  overflow: hidden;
+}
+.motion-ready .m-line-i {
+  display: block;
+  transform: translateY(110%);
+  transition: transform 1.25s var(--ease-atelier);
+  transition-delay: calc(var(--i, 0) * 110ms);
+}
+.motion-ready .in .m-line-i,
+.motion-ready .m-line.in .m-line-i {
+  transform: none;
+}
+
+/* ---------- hero: content settles in after the mask ---------- */
+.motion-ready .hero-sub,
+.motion-ready .hero-buttons,
+.motion-ready .hero-rating,
+.motion-ready .hero .eyebrow {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 1s var(--ease-atelier),
+    transform 1s var(--ease-atelier);
+  transition-delay: calc(320ms + var(--i, 0) * 110ms);
+}
+.motion-ready .hero-sub.in,
+.motion-ready .hero-buttons.in,
+.motion-ready .hero-rating.in,
+.motion-ready .hero .eyebrow.in {
+  opacity: 1;
+  transform: none;
+}
+.hero-bg { will-change: transform; }
+
+/* ---------- scroll cue ---------- */
+.scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+  transition: opacity 0.6s var(--ease-atelier), transform 0.6s var(--ease-atelier);
+  pointer-events: none;
+}
+.scroll-cue.gone { opacity: 0; transform: translateX(-50%) translateY(12px); }
+.scroll-cue .rule {
+  width: 64px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.42);
+}
+.scroll-cue .label {
+  font-size: 0.6rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 600;
+  padding-left: 0.34em;
+}
+.scroll-cue .tick {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0));
+  animation: cueDrop 2.4s var(--ease-atelier) infinite;
+}
+@keyframes cueDrop {
+  0%   { transform: scaleY(0); transform-origin: top; opacity: 0; }
+  35%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+  70%  { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+  100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+}
+
+/* ---------- pinned vehicle: the car holds while the copy moves ---------- */
+@media (min-width: 62rem) {
+  .fleet-feature .fleet-media {
+    position: sticky;
+    top: 96px;
+  }
+}
+
+/* ---------- gold hairline sweep on nav + inline links ---------- */
+.main-nav a,
+.link-arrow {
+  position: relative;
+}
+.main-nav a::after,
+.link-arrow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.55s var(--ease-atelier);
+}
+.main-nav a:hover::after,
+.link-arrow:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ---------- buttons lift rather than jump ---------- */
+.btn {
+  transition:
+    transform 0.5s var(--ease-atelier),
+    box-shadow 0.5s var(--ease-atelier),
+    background 0.3s var(--ease-atelier);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-gold:hover { box-shadow: 0 14px 30px -14px rgba(196, 162, 83, 0.75); }
+
+/* ---------- eyebrows breathe open ---------- */
+.motion-ready .reveal .eyebrow,
+.motion-ready .reveal.eyebrow {
+  letter-spacing: 0.34em;
+  transition: letter-spacing 1.4s var(--ease-atelier);
+}
+.motion-ready .reveal.in .eyebrow,
+.motion-ready .reveal.in.eyebrow {
+  letter-spacing: 0.16em;
+}
+
+/* ---------- anyone who asked for less motion gets none of it ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .motion-ready .reveal,
+  .motion-ready .reveal.in,
+  .motion-ready .m-line-i,
+  .motion-ready .hero-sub,
+  .motion-ready .hero-buttons,
+  .motion-ready .hero-rating,
+  .motion-ready .hero .eyebrow {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    letter-spacing: inherit !important;
+  }
+  .scroll-cue .tick { animation: none; }
+  .fleet-feature .fleet-media { position: static; }
+}
