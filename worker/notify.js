@@ -97,15 +97,15 @@ export async function sendBookingConfirmed(env, { booking, quote, when, card, ma
       ${booking.flight_number ? row("Flight", booking.flight_number) : ""}
     </table>
     <table style="width:100%;border-collapse:collapse;margin:6px 0 2px;border-top:1px solid #e3e8ef">
-      ${row("Flat rate", "$" + quote.base.toFixed(2))}
-      ${row(`Gratuity (${quote.gratuityPct}%)`, "$" + quote.gratuity.toFixed(2))}
-      ${row("Total", "$" + quote.total.toFixed(2))}
+      ${row("Fare", "$" + quote.base.toFixed(2))}
+      ${quote.tip > 0 ? row("Tip", "$" + quote.tip.toFixed(2)) : ""}
+      ${row("Total paid", "$" + quote.total.toFixed(2))}
       ${card ? row("Card on file", `${card.brand} ending ${card.last4}`) : ""}
     </table>
     <div style="margin:16px 26px;padding:14px 16px;background:#f8f6ef;border-left:3px solid ${GOLD};color:#1b2533;font:400 14px/1.6 Arial,sans-serif">
-      <strong>Nothing has been charged yet.</strong> Your card will be charged
-      $${quote.total.toFixed(2)} on ${esc(chargeWhen)} — the day before your ride.
-      Cancel before then and you are not charged at all.
+      <strong>Paid in full — $${quote.total.toFixed(2)}.</strong> Your ride is
+      confirmed and reserved. Cancel more than 24 hours before pickup and you are
+      refunded in full.
     </div>
     <div style="padding:4px 26px 22px;color:#1b2533;font:400 15px/1.6 Arial,sans-serif">
       <a href="${esc(manageUrl)}" style="color:${NAVY};font-weight:700">View or cancel this booking</a><br/>
@@ -115,10 +115,11 @@ export async function sendBookingConfirmed(env, { booking, quote, when, card, ma
   const text =
     `Your ride is confirmed, ${first}.\n\n` +
     `Pickup:  ${when.pretty}\nFrom:    ${booking.pickup}\nTo:      ${booking.dropoff}\n` +
-    `Flat rate: $${quote.base.toFixed(2)}\nGratuity (${quote.gratuityPct}%): $${quote.gratuity.toFixed(2)}\n` +
+    `Fare:    $${quote.base.toFixed(2)}\n` +
+    (quote.tip > 0 ? `Tip:     $${quote.tip.toFixed(2)}\n` : "") +
     `Total:   $${quote.total.toFixed(2)}\n\n` +
-    `NOTHING HAS BEEN CHARGED YET. Your card will be charged on ${chargeWhen}, the day before your ride.\n` +
-    `Cancel before then and you are not charged.\n\n` +
+    `PAID IN FULL: $${quote.total.toFixed(2)}. Your ride is confirmed and reserved.\n` +
+    `Cancel more than 24 hours before pickup and you are refunded in full.\n\n` +
     `Manage: ${manageUrl}\nQuestions: 848-667-0999\n`;
 
   return send(env, {
@@ -141,7 +142,7 @@ export async function sendReceipt(env, { booking, amount, when, transId, kind })
     <div style="padding:24px 26px 4px;color:#1b2533;font:400 15px/1.6 Arial,sans-serif">
       ${isExtras
         ? "Thank you for riding with us. Here are the additional charges from your trip."
-        : `Your card has been charged for tomorrow's ride.`}
+        : `Thank you — here is your receipt.`}
     </div>
     <table style="width:100%;border-collapse:collapse;margin:12px 0 2px">
       ${row("Amount", "$" + Number(amount).toFixed(2))}
@@ -236,7 +237,13 @@ export async function sendOwnerBooking(env, { booking, quote, when, kind }) {
    Matt — SMS. Optional: only fires if Twilio vars are present.
    ------------------------------------------------------------ */
 export async function smsOwner(env, message) {
-  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_FROM || !env.OWNER_PHONE) {
+  // Twilio accepts either the Account auth token or an API Key pair for
+  // Basic auth. The key pair is preferable — it can be revoked on its own
+  // without rotating the account's master credential — so it wins here.
+  const user = env.TWILIO_API_KEY_SID || env.TWILIO_ACCOUNT_SID;
+  const pass = env.TWILIO_API_KEY_SECRET || env.TWILIO_AUTH_TOKEN;
+
+  if (!env.TWILIO_ACCOUNT_SID || !user || !pass || !env.TWILIO_FROM || !env.OWNER_PHONE) {
     return { ok: false, skipped: true };
   }
   try {
@@ -250,7 +257,7 @@ export async function smsOwner(env, message) {
       {
         method: "POST",
         headers: {
-          Authorization: "Basic " + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`),
+          Authorization: "Basic " + btoa(`${user}:${pass}`),
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body,

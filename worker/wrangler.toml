@@ -15,7 +15,7 @@ workers_dev = true
 # All three Authorize.net values are in ~/.amedeos-authnet.env
 [vars]
 TO_EMAIL = "donny@pureluxbio.com, Gagliotimatt2@gmail.com"
-FROM_EMAIL = "Amedeo's Private Car Service <reservations@send.pureluxbio.com>"
+FROM_EMAIL = "Amedeo's Private Car Service <reservations@allfloridaairportscarservice.com>"
 SITE_URL = "https://allfloridaairportscarservice.com"
 
 # VERIFIED 2026-08-10: Matt's credentials authenticate against PRODUCTION
@@ -33,7 +33,19 @@ ANET_ENV = "production"
 # Verified valid against production 2026-08-10.
 ANET_PUBLIC_CLIENT_KEY = "7D49SZCsXzfefp5UTn6rDL92KfWm69cz3KcX7DJ966haufED4q76k79EK33S3gwH"
 
-# Optional SMS to Matt. Leave blank to disable; email still goes out.
+# SMS to Matt — NOT CONFIGURED, and deliberately left that way.
+#
+# These must be Amedeo's OWN Twilio account. PureLux Bio's credentials were
+# briefly wired in here and removed: sharing them would bill Matt's texts to
+# PureLux, send from a California number unrelated to this business, and break
+# Amedeo's the moment that unrelated account changed. Client projects do not
+# share credentials.
+#
+# To enable: create a Twilio account for Amedeo's, buy an SMS-capable number,
+# then set TWILIO_ACCOUNT_SID / TWILIO_FROM here and put the API key pair in
+# with `wrangler secret put TWILIO_API_KEY_SID` and TWILIO_API_KEY_SECRET.
+# OWNER_PHONE must be a real handset — a VoIP or forwarding number will
+# swallow every ride alert silently.
 TWILIO_ACCOUNT_SID = ""
 TWILIO_FROM = ""
 OWNER_PHONE = ""
