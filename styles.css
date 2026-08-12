@@ -773,34 +773,51 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
   .fleet-feature .fleet-media { position: static; }
 }
 
-/* ---------- gratuity: a fine segmented control, not app pills ----------
-   Chunky filled pills read as a food-delivery checkout. A hairline
-   segmented row reads as an instrument — which is the register this
-   brand is in. The selection is marked by a gold rule beneath the
-   segment rather than a filled blob. */
-.q-tip-seg {
-  display: flex;
+
+
+/* ---------- gratuity: collapsed to one line, opened on request ----------
+   Eight options sitting open dominates the panel and reads like a tip
+   jar. Collapsed, it is a line item showing what is applied; "Change"
+   opens the ladder, and choosing a value closes it again. */
+.q-tip-row .q-tip-edit {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0 0 1px;
+  margin-left: 8px;
+  color: var(--gold-2);
+  font: 600 0.76rem var(--sans);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(216, 186, 110, 0.45);
+  transition: color 0.3s var(--ease-atelier), border-color 0.3s var(--ease-atelier);
+}
+.q-tip-row .q-tip-edit:hover { color: #fff; border-color: #fff; }
+.q-tip-row .q-tip-edit:focus-visible { outline: 1px solid var(--gold-2); outline-offset: 3px; }
+
+.q-tip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 4px;
   overflow: hidden;
-  margin: 2px 0 4px;
+  margin: 6px 0 4px;
 }
 .q-seg {
-  flex: 1;
   appearance: none;
   background: none;
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.66);
   font: 600 0.76rem/1 var(--sans);
-  letter-spacing: 0.02em;
-  padding: 9px 4px 8px;
+  padding: 10px 4px 9px;
   cursor: pointer;
   position: relative;
   white-space: nowrap;
   transition: color 0.35s var(--ease-atelier), background 0.35s var(--ease-atelier);
 }
-.q-seg:last-child { border-right: 0; }
+.q-seg:nth-child(4n) { border-right: 0; }
+.q-seg:nth-last-child(-n + 4) { border-bottom: 0; }
 .q-seg:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
 .q-seg::after {
   content: "";
@@ -815,18 +832,6 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 .q-seg.on::after { transform: scaleX(1); }
 .q-seg:focus-visible { outline: 1px solid var(--gold-2); outline-offset: -2px; }
 
-/* ---------- quieter, tighter quote panel ---------- */
-.quote-panel { padding: 17px 19px 15px; }
-.quote-panel .q-line { padding: 4px 0; font-size: 0.9rem; }
-.quote-panel .q-line.q-total {
-  margin-top: 8px;
-  padding-top: 11px;
-  font-size: 1.08rem;
-  letter-spacing: -0.01em;
-}
-.quote-panel .q-note { font-size: 0.75rem; margin-top: 11px; }
-.q-avail { margin-top: 11px; padding: 9px 12px; font-size: 0.82rem; }
-
 @media (max-width: 26rem) {
-  .q-seg { font-size: 0.7rem; padding: 9px 2px 8px; }
+  .q-seg { font-size: 0.71rem; padding: 10px 2px 9px; }
 }

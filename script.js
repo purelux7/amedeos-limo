@@ -88,7 +88,7 @@
 
   if (form) {
     var CFG = null, AVAIL = null, busy = false;
-    var TIP = { pct: null, amount: null, touched: false };
+    var TIP = { pct: null, amount: null, touched: false, open: false };
 
     function $(id) { return document.getElementById(id); }
     function val(id) { var el = $(id); return el ? (el.value || "").trim() : ""; }
@@ -198,15 +198,30 @@
         '<div class="q-line"><span>' + q.label + '</span><span>' + money(q.base) + '</span></div>';
 
       if (tipCfg.enabled) {
-        html += '<div class="q-line"><span>Gratuity</span><span>' + money(q.tip || 0) + '</span></div>';
-        html += '<div class="q-tip-seg" role="group" aria-label="Gratuity">';
-        tipCfg.options.forEach(function (pct) {
-          var on = (TIP.amount == null && TIP.pct === pct);
-          html += '<button type="button" class="q-seg' + (on ? " on" : "") + '" data-pct="' + pct + '">' + pct + '%</button>';
-        });
-        html += '<button type="button" class="q-seg' + (TIP.amount != null ? " on" : "") + '" data-other="1">Other</button>';
-        html += '<button type="button" class="q-seg' + (TIP.amount == null && TIP.pct == null ? " on" : "") + '" data-none="1">None</button>';
-        html += '</div>';
+        // Collapsed by default: one quiet line showing what is currently
+        // applied. Eight options sitting open dominates the panel and reads
+        // like a tip jar; behind "Change" it reads like a line item you may
+        // adjust. Choosing an option closes it again.
+        var label = TIP.amount != null
+          ? "Gratuity"
+          : (TIP.pct == null ? "Gratuity (none)" : "Gratuity (" + TIP.pct + "%)");
+
+        html += '<div class="q-line q-tip-row">' +
+                  '<span>' + label + ' <button type="button" class="q-tip-edit" data-toggle="1">' +
+                    (TIP.open ? "Close" : "Change") + '</button></span>' +
+                  '<span>' + money(q.tip || 0) + '</span>' +
+                '</div>';
+
+        if (TIP.open) {
+          html += '<div class="q-tip-grid" role="group" aria-label="Gratuity">';
+          tipCfg.options.forEach(function (pct) {
+            var on = (TIP.amount == null && TIP.pct === pct);
+            html += '<button type="button" class="q-seg' + (on ? " on" : "") + '" data-pct="' + pct + '">' + pct + '%</button>';
+          });
+          html += '<button type="button" class="q-seg' + (TIP.amount != null ? " on" : "") + '" data-other="1">Other</button>';
+          html += '<button type="button" class="q-seg' + (TIP.amount == null && TIP.pct == null ? " on" : "") + '" data-none="1">None</button>';
+          html += '</div>';
+        }
       }
 
       html += '<div class="q-line q-total"><span>Total</span><span>' + money(q.total) + '</span></div>';
@@ -238,9 +253,18 @@
         });
       });
 
+      var toggle = panel.querySelector(".q-tip-edit");
+      if (toggle) {
+        toggle.addEventListener("click", function () {
+          TIP.open = !TIP.open;
+          renderQuote(j);
+        });
+      }
+
       Array.prototype.forEach.call(panel.querySelectorAll(".q-seg"), function (b) {
         b.addEventListener("click", function () {
           TIP.touched = true;
+          TIP.open = false;
           if (b.getAttribute("data-none")) { TIP.pct = null; TIP.amount = null; }
           else if (b.getAttribute("data-other")) {
             var v = window.prompt("Gratuity amount in dollars", q.tip ? String(q.tip) : "");
