@@ -198,17 +198,15 @@
         '<div class="q-line"><span>' + q.label + '</span><span>' + money(q.base) + '</span></div>';
 
       if (tipCfg.enabled) {
-        html += '<div class="q-tip"><div class="q-tip-label">Add a tip for your driver</div><div class="q-tip-opts">';
+        html += '<div class="q-line"><span>Gratuity</span><span>' + money(q.tip || 0) + '</span></div>';
+        html += '<div class="q-tip-seg" role="group" aria-label="Gratuity">';
         tipCfg.options.forEach(function (pct) {
           var on = (TIP.amount == null && TIP.pct === pct);
-          html += '<button type="button" class="q-tip-btn' + (on ? " on" : "") + '" data-pct="' + pct + '">' + pct + '%</button>';
+          html += '<button type="button" class="q-seg' + (on ? " on" : "") + '" data-pct="' + pct + '">' + pct + '%</button>';
         });
-        var otherOn = TIP.amount != null;
-        var noneOn = TIP.amount == null && TIP.pct == null;
-        html += '<button type="button" class="q-tip-btn' + (otherOn ? " on" : "") + '" data-other="1">Other</button>';
-        html += '<button type="button" class="q-tip-btn' + (noneOn ? " on" : "") + '" data-none="1">No tip</button>';
-        html += '</div></div>';
-        html += '<div class="q-line"><span>Tip</span><span>' + money(q.tip || 0) + '</span></div>';
+        html += '<button type="button" class="q-seg' + (TIP.amount != null ? " on" : "") + '" data-other="1">Other</button>';
+        html += '<button type="button" class="q-seg' + (TIP.amount == null && TIP.pct == null ? " on" : "") + '" data-none="1">None</button>';
+        html += '</div>';
       }
 
       html += '<div class="q-line q-total"><span>Total</span><span>' + money(q.total) + '</span></div>';
@@ -228,8 +226,7 @@
           }
         }
       }
-      html += '<p class="q-note">Tolls and airport parking are added at cost after your ride. ' +
-              'You can also add or increase the tip after your trip.</p>';
+      html += '<p class="q-note">Tolls and airport parking are billed at cost after your ride.</p>';
 
       panel.innerHTML = html;
       panel.hidden = false;
@@ -241,12 +238,12 @@
         });
       });
 
-      Array.prototype.forEach.call(panel.querySelectorAll(".q-tip-btn"), function (b) {
+      Array.prototype.forEach.call(panel.querySelectorAll(".q-seg"), function (b) {
         b.addEventListener("click", function () {
           TIP.touched = true;
           if (b.getAttribute("data-none")) { TIP.pct = null; TIP.amount = null; }
           else if (b.getAttribute("data-other")) {
-            var v = window.prompt("Tip amount in dollars", q.tip ? String(q.tip) : "");
+            var v = window.prompt("Gratuity amount in dollars", q.tip ? String(q.tip) : "");
             if (v === null) return;
             var n = Number(String(v).replace(/[^0-9.]/g, ""));
             if (!(n > 0)) { TIP.pct = null; TIP.amount = null; }

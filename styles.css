@@ -590,38 +590,7 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
 .footer-legal a { color: inherit; opacity: 0.75; }
 .footer-legal a:hover { opacity: 1; color: var(--gold); }
 
-/* ---------- tip picker inside the quote panel ---------- */
-.q-tip {
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  margin-top: 12px;
-  padding-top: 14px;
-}
-.q-tip-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--gold-2);
-  margin-bottom: 10px;
-}
-.q-tip-opts { display: flex; flex-wrap: wrap; gap: 7px; }
-.q-tip-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  border-radius: 20px;
-  padding: 8px 14px;
-  font: 700 0.84rem var(--sans);
-  cursor: pointer;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
-}
-.q-tip-btn:hover { background: rgba(255, 255, 255, 0.2); }
-.q-tip-btn.on {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: #14243d;
-}
-.q-tip-btn:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+
 
 /* ============================================================
    MOTION LAYER — slow, weighted reveals in the PureLux register,
@@ -802,4 +771,62 @@ section { padding: clamp(68px, 8vw, 110px) 0; position: relative; }
   }
   .scroll-cue .tick { animation: none; }
   .fleet-feature .fleet-media { position: static; }
+}
+
+/* ---------- gratuity: a fine segmented control, not app pills ----------
+   Chunky filled pills read as a food-delivery checkout. A hairline
+   segmented row reads as an instrument — which is the register this
+   brand is in. The selection is marked by a gold rule beneath the
+   segment rather than a filled blob. */
+.q-tip-seg {
+  display: flex;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 2px 0 4px;
+}
+.q-seg {
+  flex: 1;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.66);
+  font: 600 0.76rem/1 var(--sans);
+  letter-spacing: 0.02em;
+  padding: 9px 4px 8px;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: color 0.35s var(--ease-atelier), background 0.35s var(--ease-atelier);
+}
+.q-seg:last-child { border-right: 0; }
+.q-seg:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+.q-seg::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform 0.4s var(--ease-atelier);
+}
+.q-seg.on { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.q-seg.on::after { transform: scaleX(1); }
+.q-seg:focus-visible { outline: 1px solid var(--gold-2); outline-offset: -2px; }
+
+/* ---------- quieter, tighter quote panel ---------- */
+.quote-panel { padding: 17px 19px 15px; }
+.quote-panel .q-line { padding: 4px 0; font-size: 0.9rem; }
+.quote-panel .q-line.q-total {
+  margin-top: 8px;
+  padding-top: 11px;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+}
+.quote-panel .q-note { font-size: 0.75rem; margin-top: 11px; }
+.q-avail { margin-top: 11px; padding: 9px 12px; font-size: 0.82rem; }
+
+@media (max-width: 26rem) {
+  .q-seg { font-size: 0.7rem; padding: 9px 2px 8px; }
 }
