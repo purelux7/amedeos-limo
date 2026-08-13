@@ -132,7 +132,7 @@ export async function sendBookingConfirmed(env, { booking, quote, when, card, ma
 }
 
 /* ------------------------------------------------------------
-   Customer — receipt after the T-24h charge
+   Customer — receipt for a charge
    ------------------------------------------------------------ */
 export async function sendReceipt(env, { booking, amount, when, transId, kind }) {
   const isExtras = kind === "extras";
@@ -170,12 +170,12 @@ export async function sendReceipt(env, { booking, amount, when, transId, kind })
 }
 
 /* ------------------------------------------------------------
-   Customer — card declined at T-24h, needs action
+   Customer — a later charge was declined and needs a working card
    ------------------------------------------------------------ */
 export async function sendCardProblem(env, { booking, when, amount, manageUrl }) {
   const body = `
     <div style="padding:24px 26px 4px;color:#1b2533;font:400 15px/1.6 Arial,sans-serif">
-      We tried to charge your card for tomorrow's ride and it did not go through.
+      We tried to charge your card for this ride and it did not go through.
       <strong>Your booking is still held</strong> — we just need a working card.
     </div>
     <table style="width:100%;border-collapse:collapse;margin:12px 0 2px">
@@ -194,14 +194,14 @@ export async function sendCardProblem(env, { booking, when, amount, manageUrl })
     subject: `Action needed — card declined for ${when.pretty}`,
     html: shell("We couldn't process your card", body),
     text:
-      `We tried to charge your card for tomorrow's ride and it did not go through.\n` +
+      `We tried to charge your card for this ride and it did not go through.\n` +
       `Your booking is still held.\n\nPickup: ${when.pretty}\nAmount due: $${Number(amount).toFixed(2)}\n\n` +
       `Update your card: ${manageUrl}\nOr call Matt: 848-667-0999\n`,
   });
 }
 
 /* ------------------------------------------------------------
-   Matt — new booking, and the T-24h "tomorrow's ride" alert
+   Matt — new booking, and the pre-ride run sheet
    ------------------------------------------------------------ */
 export async function sendOwnerBooking(env, { booking, quote, when, kind }) {
   const isAlert = kind === "alert";
@@ -218,7 +218,7 @@ export async function sendOwnerBooking(env, { booking, quote, when, kind }) {
       ${booking.flight_number ? row("Flight", booking.flight_number) : ""}
       ${booking.notes ? row("Notes", booking.notes) : ""}
       ${row("Total", "$" + Number(quote.total).toFixed(2))}
-      ${row("Payment", isAlert ? "CHARGED" : "Card on file — charges " + (booking.chargeWhen || "T-24h"))}
+      ${row("Payment", "PAID IN FULL")}
     </table>`;
 
   return send(env, {

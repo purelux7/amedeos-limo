@@ -193,9 +193,12 @@ export function quoteFor(rate, settings, opts = {}) {
     const amt = Number(opts.tipAmount);
     const pct = Number(opts.tipPct);
     if (Number.isFinite(amt) && amt > 0) {
-      tip = money(Math.min(amt, base * 2));
+      // Capped at half the fare. The previous 2x ceiling still allowed a
+      // $400 "gratuity" on a $200 ride from a direct API call — technically
+      // clamped, but not an amount any customer would have intended.
+      tip = money(Math.min(amt, base * 0.5));
     } else if (Number.isFinite(pct) && pct > 0) {
-      tipPct = Math.min(pct, 100);
+      tipPct = Math.min(pct, 50);
       tip = money(base * (tipPct / 100));
     }
   }

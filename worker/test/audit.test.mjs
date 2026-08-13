@@ -671,7 +671,9 @@ section("M. Tips");
   check("negative tip ignored", (await neg.json()).quote.total, 200);
 
   const huge = await handleQuote(req({ destCode: "MCO", tipAmount: 999999 }), env, CORS);
-  check("absurd tip capped at 2x fare", (await huge.json()).quote.total, 600);
+  check("absurd tip capped at half the fare", (await huge.json()).quote.total, 300);
+
+  check("pct tip clamped to 50%", (await handleQuote(req({ destCode: "MCO", tipPct: 100000 }), env, CORS).then(r=>r.json())).quote.total, 300);
 
   const r = await handleBook(req(booking({ destCode: "PBI", date: futureDate(73), time: "09:00" })), env, CORS, ctx);
   const j = await r.json();

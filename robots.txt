@@ -1,0 +1,5 @@
+# Amedeo's Private Car Service
+User-agent: *
+Allow: /
+
+Sitemap: https://allfloridaairportscarservice.com/sitemap.xml
