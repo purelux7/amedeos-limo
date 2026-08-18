@@ -26,6 +26,12 @@ import {
 } from "./api.js";
 import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
+import { PAY_HTML } from "./paypage.js";
+import {
+  listInvoices, getInvoice, createInvoice, updateInvoice,
+  sendInvoiceEmail, sendInvoiceSms, voidInvoice,
+  calendarFeed, payInfo, payCharge,
+} from "./invoices.js";
 import { loadSettings, localToUtc, blockWindow } from "./engine.js";
 
 const ALLOWED_ORIGINS = [
@@ -108,6 +114,29 @@ export default {
       }
       if (path === "/api/manage/cancel" && method === "POST") {
         return await handleManageCancel(request, env, cors, ctx);
+      }
+
+      // ---------- public payment link ----------
+      // These sit ABOVE the /api/ auth wall on purpose: the person paying
+      // an invoice is a customer with a secret link, not a logged-in admin.
+      // The token IS the authorisation, which is why it is 32 random chars
+      // and why voiding an invoice clears it.
+      const mPayPage = path.match(/^\/pay\/([A-Za-z0-9_-]{8,})$/);
+      if (mPayPage && method === "GET") {
+        return new Response(PAY_HTML, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      const mPayApi = path.match(/^\/api\/pay\/([A-Za-z0-9_-]{8,})$/);
+      if (mPayApi && method === "GET") {
+        return await payInfo(env, cors, mPayApi[1]);
+      }
+      if (mPayApi && method === "POST") {
+        return await payCharge(request, env, cors, mPayApi[1]);
       }
 
       // ---------- dashboard page ----------
@@ -202,6 +231,38 @@ export default {
         if (path === "/api/run-digest" && method === "POST") {
           const out = await runDigest(env);
           return json(out, 200, cors);
+        }
+
+        // ---------- invoicing ----------
+        if (path === "/api/invoices" && method === "GET") {
+          return await listInvoices(env, cors, url);
+        }
+        if (path === "/api/invoices" && method === "POST") {
+          return await createInvoice(request, env, cors);
+        }
+        const mInv = path.match(/^\/api\/invoices\/(\d+)$/);
+        if (mInv && method === "GET") {
+          return await getInvoice(env, cors, Number(mInv[1]));
+        }
+        if (mInv && (method === "PATCH" || method === "POST")) {
+          return await updateInvoice(request, env, cors, Number(mInv[1]));
+        }
+        const mInvEmail = path.match(/^\/api\/invoices\/(\d+)\/email$/);
+        if (mInvEmail && method === "POST") {
+          return await sendInvoiceEmail(env, cors, Number(mInvEmail[1]));
+        }
+        const mInvSms = path.match(/^\/api\/invoices\/(\d+)\/sms$/);
+        if (mInvSms && method === "POST") {
+          return await sendInvoiceSms(env, cors, Number(mInvSms[1]));
+        }
+        const mInvVoid = path.match(/^\/api\/invoices\/(\d+)\/void$/);
+        if (mInvVoid && method === "POST") {
+          return await voidInvoice(env, cors, Number(mInvVoid[1]));
+        }
+
+        // ---------- calendar ----------
+        if (path === "/api/calendar" && method === "GET") {
+          return await calendarFeed(env, cors, url);
         }
 
         if (path === "/api/customers" && method === "GET") {

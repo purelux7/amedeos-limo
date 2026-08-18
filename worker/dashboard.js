@@ -16,11 +16,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<meta name="theme-color" content="#0e2340"/>
+<meta name="theme-color" content="#14171c"/>
 <title>Amedeo's</title>
 <style>
-  :root{--navy:#0e2340;--navy2:#16335c;--gold:#c4a253;--gold-d:#a8801f;
-        --ink:#1b2533;--muted:#7b8597;--line:#e3e8ef;--bg:#f4f6f9;
+  :root{--navy:#14171c;--navy2:#232830;--gold:#c8a961;--gold-d:#8a6d2f;
+        --metal:linear-gradient(135deg,#e0c894 0%,#a8873f 34%,#8a6d2f 58%,#d6bd84 100%);
+        --ink:#14171c;--muted:#8a929d;--line:#e6e8ec;--bg:#f6f7f9;
         --ok:#1f7a4d;--ok-bg:#e9f6ee;--warn:#9a6b12;--warn-bg:#fdf3e2;
         --bad:#b03a3a;--bad-bg:#f6e9e9;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -95,6 +96,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   .field{margin-bottom:12px}
   .field label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);
                text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+  .line{display:flex;justify-content:space-between;gap:14px;padding:9px 0;
+        border-bottom:1px solid var(--line);font-size:.92rem}
+  .line:last-of-type{border-bottom:0}
   .total{background:var(--bg);border-radius:10px;padding:13px 14px;margin:14px 0;
          display:flex;justify-content:space-between;align-items:center;font-weight:800}
   .total .n{font-size:1.3rem}
@@ -129,10 +133,56 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   nav.tabs button{flex:1;border:none;background:none;padding:11px 4px 13px;color:var(--muted);
                   font-size:.68rem;font-weight:800;cursor:pointer;letter-spacing:.02em}
   nav.tabs button.active{color:var(--navy)}
-  nav.tabs button .ic{display:block;font-size:1.15rem;margin-bottom:1px}
+  nav.tabs button .ic{display:block;margin:0 auto 3px;width:21px;height:21px}
+  nav.tabs button .ic svg{width:21px;height:21px;display:block;
+    stroke-linecap:round;stroke-linejoin:round}
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:92px;background:var(--navy);
          color:#fff;padding:12px 18px;border-radius:24px;font-weight:700;font-size:.88rem;
          z-index:60;display:none;max-width:90vw;text-align:center}
+
+  /* ---------- calendar ---------- */
+  .calbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 2px 12px}
+  .calbar strong{font:600 .95rem/1 Inter,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+  .calnav{border:1px solid var(--line);background:#fff;color:var(--ink);width:38px;height:38px;
+          border-radius:2px;font-size:1.2rem;line-height:1;cursor:pointer}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);
+           border:1px solid var(--line)}
+  .calgrid .dow{background:#fff;color:var(--muted);font-size:.58rem;letter-spacing:.14em;
+                text-transform:uppercase;text-align:center;padding:8px 0;font-weight:700}
+  .cell{background:#fff;min-height:58px;padding:6px 5px;position:relative;cursor:pointer;
+        display:flex;flex-direction:column;gap:4px}
+  .cell.out{background:#fafbfc;color:var(--muted)}
+  .cell .n{font-size:.76rem;font-weight:600;color:var(--ink)}
+  .cell.out .n{color:#c3c9d1;font-weight:400}
+  .cell.today .n{background:var(--metal);color:#fff;border-radius:50%;width:21px;height:21px;
+                 display:inline-flex;align-items:center;justify-content:center;font-size:.7rem}
+  .cell.sel{outline:2px solid var(--gold-d);outline-offset:-2px}
+  .pip{height:3px;border-radius:2px;background:var(--gold-d)}
+  .pip.off{background:#c3c9d1}
+  .pip.due{background:#3d6b8f}
+  .cell .more{font-size:.58rem;color:var(--muted)}
+
+  /* ---------- invoices ---------- */
+  .inv{background:#fff;border:1px solid var(--line);padding:14px;margin-bottom:9px;
+       display:flex;justify-content:space-between;gap:12px;align-items:flex-start;cursor:pointer}
+  .inv .who{font-weight:600;color:var(--ink)}
+  .inv .meta{font-size:.76rem;color:var(--muted);margin-top:2px}
+  .inv .amt{font:500 1.25rem/1 "Cormorant Garamond",Georgia,serif;color:var(--ink);white-space:nowrap}
+  .pill{display:inline-block;font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;
+        font-weight:700;padding:3px 7px;border-radius:2px;margin-top:6px}
+  .pill.draft{background:#eef0f3;color:#5b6470}
+  .pill.sent{background:#fdf3e2;color:var(--warn)}
+  .pill.paid{background:var(--ok-bg);color:var(--ok)}
+  .pill.void{background:#f6e9e9;color:var(--bad)}
+  .fab{position:fixed;right:16px;bottom:90px;z-index:30;border:0;border-radius:2px;
+       background:var(--metal);color:#fff;padding:15px 20px;font-weight:700;font-size:.72rem;
+       letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 30px -14px rgba(20,23,28,.6);cursor:pointer}
+  .li{display:grid;grid-template-columns:1fr 52px 74px 30px;gap:7px;margin-bottom:8px;align-items:center}
+  .li input{padding:10px}
+  .li .x{border:0;background:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+  .linkbox{display:flex;gap:8px;margin-top:10px}
+  .linkbox input{font-size:.76rem;background:#f6f7f9}
+  .invacts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -154,7 +204,18 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   </header>
 
   <section id="v-today" class="wrap"></section>
-  <section id="v-upcoming" class="wrap" style="display:none"></section>
+  <section id="v-calendar" class="wrap" style="display:none">
+    <div class="calbar">
+      <button class="calnav" id="calPrev">&#8249;</button>
+      <strong id="calTitle">&nbsp;</strong>
+      <button class="calnav" id="calNext">&#8250;</button>
+    </div>
+    <div class="calgrid" id="calGrid"></div>
+    <div id="calDay"></div>
+    <h2 class="day">Everything ahead</h2>
+    <div id="v-upcoming"></div>
+  </section>
+  <section id="v-invoices" class="wrap" style="display:none"></section>
   <section id="v-timeoff" class="wrap" style="display:none"></section>
   <section id="v-more" class="wrap" style="display:none"></section>
 </div>
@@ -163,10 +224,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 <div class="toast" id="toast"></div>
 
 <nav class="tabs" id="tabs" style="display:none">
-  <button class="active" data-v="v-today"><span class="ic">&#9733;</span>Today</button>
-  <button data-v="v-upcoming"><span class="ic">&#128197;</span>Upcoming</button>
-  <button data-v="v-timeoff"><span class="ic">&#9209;</span>Time off</button>
-  <button data-v="v-more"><span class="ic">&#9776;</span>More</button>
+  <button class="active" data-v="v-today"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3.5l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.8l6-.7z"/></svg></span>Today</button>
+  <button data-v="v-calendar"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></svg></span>Calendar</button>
+  <button data-v="v-invoices"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8.5h6M9 12.5h6"/></svg></span>Invoices</button>
+  <button data-v="v-timeoff"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg></span>Time off</button>
+  <button data-v="v-more"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7.5h16M4 12h16M4 16.5h16"/></svg></span>More</button>
 </nav>
 
 <script>
@@ -511,14 +573,364 @@ function doLogin(){
   });
 }
 function showView(id){
-  ["v-today","v-upcoming","v-timeoff","v-more"].forEach(function(v){
+  ["v-today","v-calendar","v-invoices","v-timeoff","v-more"].forEach(function(v){
     gid(v).style.display = (v === id) ? "block" : "none";
   });
   var tb = document.querySelectorAll("nav.tabs button");
   for (var i=0;i<tb.length;i++) tb[i].classList.toggle("active", tb[i].getAttribute("data-v") === id);
+  if (id === "v-calendar") { renderCalendar(); renderUpcoming(); }
+  if (id === "v-invoices") loadInvoices();
   if (id === "v-timeoff") renderTimeoff();
   if (id === "v-more") renderMore();
   window.scrollTo(0,0);
+}
+
+
+/* ============================================================
+   CALENDAR
+   The month grid is the point of the whole tab: Matt needs to see
+   at a glance which days are already spoken for before he says yes
+   to someone on the phone. Pips, not text — a phone cell is 45px
+   wide and a truncated pickup address tells him nothing.
+   ============================================================ */
+var CAL = { month: null, data: null, sel: null };
+
+function monthKey(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+function monthLabel(key){
+  var p = key.split("-");
+  var names = ["January","February","March","April","May","June","July",
+               "August","September","October","November","December"];
+  return names[Number(p[1])-1] + " " + p[0];
+}
+function shiftMonth(key, delta){
+  var p = key.split("-");
+  var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+  return monthKey(d);
+}
+
+function renderCalendar(){
+  if (!CAL.month) CAL.month = todayStr().slice(0,7);
+  gid("calTitle").textContent = monthLabel(CAL.month);
+  api("/api/calendar?month=" + CAL.month).then(function(r){
+    CAL.data = (r.ok && r.data) ? r.data : { bookings: [], blackouts: [], invoices: [] };
+    paintCalendar();
+  });
+}
+
+function paintCalendar(){
+  var p = CAL.month.split("-");
+  var year = Number(p[0]), mon = Number(p[1]) - 1;
+  var first = new Date(year, mon, 1);
+  var startDow = first.getDay();
+  var daysIn = new Date(year, mon + 1, 0).getDate();
+  var prevDays = new Date(year, mon, 0).getDate();
+
+  var byDay = {};
+  (CAL.data.bookings || []).forEach(function(b){
+    (byDay[b.ride_date] = byDay[b.ride_date] || { rides: [], off: 0, due: [] }).rides.push(b);
+  });
+  (CAL.data.invoices || []).forEach(function(i){
+    if (!i.due_date) return;
+    (byDay[i.due_date] = byDay[i.due_date] || { rides: [], off: 0, due: [] }).due.push(i);
+  });
+  (CAL.data.blackouts || []).forEach(function(bo){
+    var d = new Date(bo.start_utc);
+    var end = new Date(bo.end_utc);
+    for (var t = d.getTime(); t <= end.getTime(); t += 86400000){
+      var key = localParts(t);
+      (byDay[key] = byDay[key] || { rides: [], off: 0, due: [] }).off++;
+    }
+  });
+
+  var html = ["S","M","T","W","T","F","S"].map(function(d){
+    return '<div class="dow">' + d + '</div>';
+  }).join("");
+
+  var today = todayStr();
+  function cell(dateStr, num, out){
+    var d = byDay[dateStr] || { rides: [], off: 0, due: [] };
+    var pips = "";
+    var shown = Math.min(3, d.rides.length);
+    for (var i = 0; i < shown; i++) pips += '<div class="pip"></div>';
+    if (d.off) pips += '<div class="pip off"></div>';
+    if (d.due.length) pips += '<div class="pip due"></div>';
+    var extra = d.rides.length > 3 ? '<div class="more">+' + (d.rides.length - 3) + '</div>' : "";
+    return '<div class="cell' + (out ? " out" : "") +
+      (dateStr === today ? " today" : "") +
+      (dateStr === CAL.sel ? " sel" : "") +
+      '" data-d="' + dateStr + '"><span class="n">' + num + '</span>' + pips + extra + '</div>';
+  }
+
+  for (var i = startDow - 1; i >= 0; i--){
+    var dnum = prevDays - i;
+    var pm = shiftMonth(CAL.month, -1);
+    html += cell(pm + "-" + String(dnum).padStart(2,"0"), dnum, true);
+  }
+  for (var day = 1; day <= daysIn; day++){
+    html += cell(CAL.month + "-" + String(day).padStart(2,"0"), day, false);
+  }
+  var tail = (7 - ((startDow + daysIn) % 7)) % 7;
+  for (var k = 1; k <= tail; k++){
+    var nm = shiftMonth(CAL.month, 1);
+    html += cell(nm + "-" + String(k).padStart(2,"0"), k, true);
+  }
+
+  gid("calGrid").innerHTML = html;
+  var cells = gid("calGrid").querySelectorAll(".cell");
+  for (var c = 0; c < cells.length; c++){
+    (function(el){
+      el.onclick = function(){ CAL.sel = el.getAttribute("data-d"); paintCalendar(); showDay(CAL.sel); };
+    })(cells[c]);
+  }
+  if (CAL.sel) showDay(CAL.sel);
+}
+
+function showDay(dateStr){
+  var rides = (CAL.data.bookings || []).filter(function(b){ return b.ride_date === dateStr; });
+  var due = (CAL.data.invoices || []).filter(function(i){ return i.due_date === dateStr; });
+  if (!rides.length && !due.length){
+    gid("calDay").innerHTML = '<div class="pad">Nothing booked on ' + esc(dateStr) + '.</div>';
+    return;
+  }
+  var html = '<h2 class="day">' + esc(dateStr) + '</h2>';
+  rides.forEach(function(b){
+    html += '<div class="inv"><div><div class="who">' + esc(b.ride_time || "") + ' &middot; ' +
+      esc(b.customer_name || "Ride") + '</div><div class="meta">' +
+      esc(b.pickup || "") + ' &rarr; ' + esc(b.dropoff || "") + '</div></div>' +
+      '<div class="amt">$' + Number(b.quoted_total || 0).toFixed(0) + '</div></div>';
+  });
+  due.forEach(function(i){
+    html += '<div class="inv"><div><div class="who">Invoice ' + esc(i.number) + ' due</div>' +
+      '<div class="meta">' + esc(i.customer_name || "") + '</div></div>' +
+      '<div class="amt">$' + Number(i.total || 0).toFixed(0) + '</div></div>';
+  });
+  gid("calDay").innerHTML = html;
+}
+
+/* ============================================================
+   INVOICES
+   ============================================================ */
+var INV = { list: [] };
+
+function loadInvoices(){
+  api("/api/invoices").then(function(r){
+    INV.list = (r.ok && r.data.invoices) ? r.data.invoices : [];
+    renderInvoices();
+  });
+}
+
+function renderInvoices(){
+  var html = '<button class="fab" id="invNew">New invoice</button>';
+  if (!INV.list.length){
+    html += '<div class="pad">No invoices yet.<br/>Bill a corporate account, a wedding, or a no-show fee.</div>';
+  } else {
+    var open = INV.list.filter(function(i){ return i.status !== "paid" && i.status !== "void"; });
+    var done = INV.list.filter(function(i){ return i.status === "paid" || i.status === "void"; });
+    if (open.length){
+      html += '<h2 class="day">Awaiting payment</h2>' + open.map(invRow).join("");
+    }
+    if (done.length){
+      html += '<h2 class="day">Settled</h2>' + done.map(invRow).join("");
+    }
+  }
+  gid("v-invoices").innerHTML = html;
+  gid("invNew").onclick = openInvoiceComposer;
+  var rows = gid("v-invoices").querySelectorAll(".inv");
+  for (var i = 0; i < rows.length; i++){
+    (function(el){
+      el.onclick = function(){ openInvoice(Number(el.getAttribute("data-id"))); };
+    })(rows[i]);
+  }
+}
+
+function invRow(i){
+  return '<div class="inv" data-id="' + i.id + '"><div>' +
+    '<div class="who">' + esc(i.customer_name || "Customer") + '</div>' +
+    '<div class="meta">' + esc(i.number) + (i.due_date ? ' &middot; due ' + esc(i.due_date) : "") + '</div>' +
+    '<span class="pill ' + esc(i.status) + '">' + esc(i.status) + '</span>' +
+    '</div><div class="amt">$' + Number(i.total || 0).toFixed(2) + '</div></div>';
+}
+
+function itemRow(){
+  return '<div class="li">' +
+    '<input placeholder="Airport transfer — PBI" class="ilabel"/>' +
+    '<input inputmode="numeric" value="1" class="iqty"/>' +
+    '<input inputmode="decimal" placeholder="0.00" class="iprice"/>' +
+    '<button class="x" type="button">&times;</button></div>';
+}
+
+function openInvoiceComposer(){
+  var sheet = gid("sheet");
+  var opts = S.customers.map(function(c){
+    return '<option value="' + c.id + '">' + esc(c.name) + (c.phone ? " · " + esc(c.phone) : "") + '</option>';
+  }).join("");
+  gid("sheetInner").innerHTML =
+    '<h3>New invoice</h3>' +
+    '<div class="field"><label>Existing customer</label>' +
+      '<select id="ivCust"><option value="">— new person —</option>' + opts + '</select></div>' +
+    '<div id="ivNewWrap">' +
+      '<div class="field"><label>Name</label><input id="ivName"/></div>' +
+      '<div class="field"><label>Email</label><input id="ivEmail" inputmode="email"/></div>' +
+      '<div class="field"><label>Mobile</label><input id="ivPhone" inputmode="tel"/></div>' +
+    '</div>' +
+    '<div class="field"><label>Line items</label><div id="ivItems">' + itemRow() + '</div>' +
+      '<button class="btn ghost block" type="button" id="ivAdd">Add line</button></div>' +
+    '<div class="field"><label>Gratuity ($, optional)</label><input id="ivTip" inputmode="decimal" placeholder="0.00"/></div>' +
+    '<div class="field"><label>Due date (optional)</label><input id="ivDue" type="date"/></div>' +
+    '<div class="field"><label>Note to the customer</label><textarea id="ivNotes" rows="2"></textarea></div>' +
+    '<div class="total"><span>Total</span><span class="n" id="ivTotal">$0.00</span></div>' +
+    '<button class="btn block" id="ivSave">Create invoice</button>' +
+    '<button class="btn ghost block" id="ivCancel" style="margin-top:9px">Cancel</button>';
+  sheet.style.display = "flex";
+
+  function wireRows(){
+    var xs = gid("ivItems").querySelectorAll(".x");
+    for (var i = 0; i < xs.length; i++){
+      (function(b){
+        b.onclick = function(){
+          if (gid("ivItems").children.length > 1) b.parentNode.remove();
+          calcTotal();
+        };
+      })(xs[i]);
+    }
+    var ins = gid("ivItems").querySelectorAll("input");
+    for (var j = 0; j < ins.length; j++) ins[j].oninput = calcTotal;
+  }
+  function calcTotal(){
+    var t = 0;
+    var rows = gid("ivItems").children;
+    for (var i = 0; i < rows.length; i++){
+      var q = Number(rows[i].querySelector(".iqty").value) || 0;
+      var pr = Number(rows[i].querySelector(".iprice").value) || 0;
+      t += q * pr;
+    }
+    t += Number(gid("ivTip").value) || 0;
+    gid("ivTotal").textContent = "$" + t.toFixed(2);
+  }
+  gid("ivTip").oninput = calcTotal;
+  gid("ivAdd").onclick = function(){
+    gid("ivItems").insertAdjacentHTML("beforeend", itemRow());
+    wireRows();
+  };
+  gid("ivCust").onchange = function(){
+    gid("ivNewWrap").style.display = gid("ivCust").value ? "none" : "block";
+  };
+  wireRows();
+
+  gid("ivCancel").onclick = function(){ sheet.style.display = "none"; };
+  gid("ivSave").onclick = function(){
+    var items = [];
+    var rows = gid("ivItems").children;
+    for (var i = 0; i < rows.length; i++){
+      var label = rows[i].querySelector(".ilabel").value.trim();
+      if (!label) continue;
+      items.push({
+        label: label,
+        qty: Number(rows[i].querySelector(".iqty").value) || 1,
+        unitPrice: Number(rows[i].querySelector(".iprice").value) || 0
+      });
+    }
+    if (!items.length){ toast("Add at least one line"); return; }
+    var body = {
+      customerId: gid("ivCust").value || null,
+      name: gid("ivName") ? gid("ivName").value.trim() : "",
+      email: gid("ivEmail") ? gid("ivEmail").value.trim() : "",
+      phone: gid("ivPhone") ? gid("ivPhone").value.trim() : "",
+      items: items,
+      tip: Number(gid("ivTip").value) || 0,
+      dueDate: gid("ivDue").value || null,
+      notes: gid("ivNotes").value.trim() || null
+    };
+    var btn = gid("ivSave"); btn.disabled = true; btn.textContent = "Creating…";
+    api("/api/invoices", { method: "POST", body: body }).then(function(r){
+      btn.disabled = false; btn.textContent = "Create invoice";
+      if (!r.ok){ toast((r.data && r.data.error) || "Could not create it"); return; }
+      loadInvoices();
+      openInvoiceDetail(r.data.invoice);
+    });
+  };
+}
+
+function openInvoice(id){
+  api("/api/invoices/" + id).then(function(r){
+    if (r.ok) openInvoiceDetail(r.data.invoice);
+  });
+}
+
+function openInvoiceDetail(inv){
+  var sheet = gid("sheet");
+  var lines = (inv.items || []).map(function(it){
+    return '<div class="line"><span>' + esc(it.label) +
+      (it.qty > 1 ? ' &times; ' + it.qty : "") + '</span><span>$' +
+      Number(it.amount).toFixed(2) + '</span></div>';
+  }).join("");
+
+  var link = inv.pay_url || "";
+  var paid = inv.status === "paid";
+
+  gid("sheetInner").innerHTML =
+    '<h3>Invoice ' + esc(inv.number) + '</h3>' +
+    '<div class="sub">' + esc(inv.customer_name || "") + '</div>' +
+    lines +
+    (inv.tip > 0 ? '<div class="line"><span>Gratuity</span><span>$' + Number(inv.tip).toFixed(2) + '</span></div>' : "") +
+    '<div class="total"><span>Total</span><span class="n">$' + Number(inv.total).toFixed(2) + '</span></div>' +
+    (paid
+      ? '<div class="pad" style="padding:14px 0">Paid ' + esc((inv.paid_at || "").slice(0,10)) +
+        (inv.card_last4 ? ' &middot; card ending ' + esc(inv.card_last4) : "") + '</div>'
+      : '<div class="linkbox"><input id="ivLink" readonly value="' + esc(link) + '"/>' +
+        '<button class="btn ghost" id="ivCopy">Copy</button></div>' +
+        '<div class="invacts">' +
+          '<button class="btn" id="ivEmail">Email link</button>' +
+          '<button class="btn" id="ivSms">Text link</button>' +
+        '</div>' +
+        '<button class="btn ghost block" id="ivVoid" style="margin-top:9px">Void invoice</button>') +
+    '<button class="btn ghost block" id="ivClose" style="margin-top:9px">Close</button>';
+  sheet.style.display = "flex";
+
+  gid("ivClose").onclick = function(){ sheet.style.display = "none"; };
+  if (paid) return;
+
+  gid("ivCopy").onclick = function(){
+    var f = gid("ivLink");
+    f.select(); f.setSelectionRange(0, 99999);
+    if (navigator.clipboard) navigator.clipboard.writeText(f.value);
+    else document.execCommand("copy");
+    toast("Link copied");
+  };
+
+  gid("ivEmail").onclick = function(){
+    var b = gid("ivEmail"); b.disabled = true; b.textContent = "Sending…";
+    api("/api/invoices/" + inv.id + "/email", { method: "POST" }).then(function(r){
+      b.disabled = false; b.textContent = "Email link";
+      toast(r.ok ? "Emailed" : ((r.data && r.data.error) || "Email failed"));
+      if (r.ok) loadInvoices();
+    });
+  };
+
+  /* Text: if this business ever gets its own Twilio number the Worker
+     sends it outright. Until then the Worker hands back an sms: URL and
+     Matt's own Messages app opens with the text already written — the
+     link goes out from the number his customers recognise. */
+  gid("ivSms").onclick = function(){
+    var b = gid("ivSms"); b.disabled = true; b.textContent = "…";
+    api("/api/invoices/" + inv.id + "/sms", { method: "POST" }).then(function(r){
+      b.disabled = false; b.textContent = "Text link";
+      if (!r.ok){ toast((r.data && r.data.error) || "Could not text it"); return; }
+      loadInvoices();
+      if (r.data.mode === "sent"){ toast("Texted"); return; }
+      toast("Opening Messages…");
+      window.location.href = r.data.smsHref;
+    });
+  };
+
+  gid("ivVoid").onclick = function(){
+    api("/api/invoices/" + inv.id + "/void", { method: "POST" }).then(function(r){
+      if (r.ok){ sheet.style.display = "none"; toast("Voided"); loadInvoices(); }
+      else toast((r.data && r.data.error) || "Could not void it");
+    });
+  };
 }
 
 gid("loginBtn").onclick = doLogin;
@@ -527,6 +939,9 @@ var tbs = document.querySelectorAll("nav.tabs button");
 for (var i=0;i<tbs.length;i++){
   (function(t){ t.onclick = function(){ showView(t.getAttribute("data-v")); }; })(tbs[i]);
 }
+gid("calPrev").onclick = function(){ CAL.month = shiftMonth(CAL.month || todayStr().slice(0,7), -1); CAL.sel = null; renderCalendar(); };
+gid("calNext").onclick = function(){ CAL.month = shiftMonth(CAL.month || todayStr().slice(0,7), 1); CAL.sel = null; renderCalendar(); };
+
 api("/api/me").then(function(r){ if (r.data && r.data.authed) enterApp(); });
 </script>
 </body>
