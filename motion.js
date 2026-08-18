@@ -141,6 +141,79 @@
   drift();
 
   /* ----------------------------------------------------------
+     3b. Kinetic tiles.
+         One pointermove listener per card, writing three custom
+         properties: where the cursor is (for the gold spotlight)
+         and how far off-centre it sits (for the tilt). The values
+         land on the element as CSS variables and the compositor
+         does the rest — no layout, no per-frame JS geometry.
+
+         Pointer-only: coarse pointers (phones) never hover, and a
+         tilt that fires on touch reads as a bug.
+     ---------------------------------------------------------- */
+  var fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (fine) {
+    var tiles = document.querySelectorAll(
+      ".feature-card, .service-card, .route-card, .airport-card, .testimonial-card"
+    );
+    Array.prototype.forEach.call(tiles, function (card) {
+      var raf = 0, px = 0, py = 0;
+
+      function apply() {
+        raf = 0;
+        var r = card.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        var x = px - r.left, y = py - r.top;
+        card.style.setProperty("--mx", x.toFixed(1) + "px");
+        card.style.setProperty("--my", y.toFixed(1) + "px");
+        // Max 5deg. Anything more and text edges start to shimmer.
+        var ry = ((x / r.width) - 0.5) * 10;
+        var rx = (0.5 - (y / r.height)) * 10;
+        card.style.setProperty("--ry", ry.toFixed(2) + "deg");
+        card.style.setProperty("--rx", rx.toFixed(2) + "deg");
+      }
+
+      card.addEventListener("pointermove", function (e) {
+        px = e.clientX; py = e.clientY;
+        card.classList.add("tilt");
+        if (!raf) raf = requestAnimationFrame(apply);
+      }, { passive: true });
+
+      card.addEventListener("pointerleave", function () {
+        card.classList.remove("tilt");
+        card.style.setProperty("--rx", "0deg");
+        card.style.setProperty("--ry", "0deg");
+      }, { passive: true });
+    });
+  }
+
+  /* ----------------------------------------------------------
+     3c. Scroll rail — a gold filament showing how much page is left.
+         Injected here rather than in the markup so that a browser
+         with JS off never renders a bar that can never fill.
+     ---------------------------------------------------------- */
+  var rail = document.createElement("div");
+  rail.className = "scroll-rail";
+  rail.setAttribute("aria-hidden", "true");
+  var railFill = document.createElement("span");
+  rail.appendChild(railFill);
+  document.body.appendChild(rail);
+
+  var railTicking = false;
+  function railDraw() {
+    railTicking = false;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+    railFill.style.width = (p * 100).toFixed(2) + "%";
+  }
+  window.addEventListener("scroll", function () {
+    if (railTicking) return;
+    railTicking = true;
+    requestAnimationFrame(railDraw);
+  }, { passive: true });
+  railDraw();
+
+  /* ----------------------------------------------------------
      4. Scroll cue — fades out the moment the visitor starts moving,
         so it reads as an invitation rather than furniture.
      ---------------------------------------------------------- */
