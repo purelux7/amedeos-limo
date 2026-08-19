@@ -40,6 +40,8 @@ export function freshDb() {
   db.exec(readFileSync(`${WORKER}/migrations/004_tip_options.sql`, "utf8"));
   db.exec(readFileSync(`${WORKER}/migrations/005_invoices_and_payment_links.sql`, "utf8"));
   db.exec(readFileSync(`${WORKER}/migrations/006_real_sessions.sql`, "utf8"));
+  db.exec(readFileSync(`${WORKER}/migrations/007_audit_log.sql`, "utf8"));
+  db.exec(readFileSync(`${WORKER}/migrations/008_admin_users.sql`, "utf8"));
   return { db, DB: new D1(db) };
 }
 

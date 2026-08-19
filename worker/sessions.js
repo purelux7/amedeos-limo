@@ -42,19 +42,20 @@ export function cookieHeader(token, maxAgeSeconds) {
 
 export const CLEAR_COOKIE = "afacs=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
 
-export async function createSession(env, request) {
+export async function createSession(env, request, userId) {
   const token = newToken();
   const tokenHash = await hashToken(token);
   const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString().replace("T", " ").slice(0, 19);
 
   await env.DB.prepare(
-    `INSERT INTO admin_sessions (token_hash, expires_at, last_seen_at, user_agent, ip)
-     VALUES (?, ?, datetime('now'), ?, ?)`
+    `INSERT INTO admin_sessions (token_hash, expires_at, last_seen_at, user_agent, ip, user_id)
+     VALUES (?, ?, datetime('now'), ?, ?, ?)`
   ).bind(
     tokenHash,
     expires,
     String(request.headers.get("User-Agent") || "").slice(0, 200),
-    String(request.headers.get("CF-Connecting-IP") || "").slice(0, 60)
+    String(request.headers.get("CF-Connecting-IP") || "").slice(0, 60),
+    userId || null
   ).run();
 
   // Opportunistic cleanup. No cron needed for a table this small.
@@ -67,7 +68,7 @@ export async function validSession(env, request) {
   const token = readCookie(request);
   if (!token) return null;
   const row = await env.DB.prepare(
-    `SELECT id, expires_at FROM admin_sessions
+    `SELECT id, expires_at, user_id FROM admin_sessions
       WHERE token_hash = ? AND expires_at > datetime('now')`
   ).bind(await hashToken(token)).first().catch(() => null);
   if (!row) return null;
@@ -104,15 +105,18 @@ export async function listSessions(env, request) {
   const token = readCookie(request);
   const currentHash = token ? await hashToken(token) : "";
   const { results } = await env.DB.prepare(
-    `SELECT id, token_hash, created_at, expires_at, last_seen_at, user_agent, ip
-       FROM admin_sessions WHERE expires_at > datetime('now')
-      ORDER BY last_seen_at DESC`
+    `SELECT s.id, s.token_hash, s.created_at, s.expires_at, s.last_seen_at,
+            s.user_agent, s.ip, u.username
+       FROM admin_sessions s LEFT JOIN admin_users u ON u.id = s.user_id
+      WHERE s.expires_at > datetime('now')
+      ORDER BY s.last_seen_at DESC`
   ).all().catch(() => ({ results: [] }));
   return (results || []).map((r) => ({
     id: r.id,
     createdAt: r.created_at,
     lastSeenAt: r.last_seen_at,
     expiresAt: r.expires_at,
+    username: r.username || null,
     device: describeAgent(r.user_agent),
     ip: r.ip,
     current: r.token_hash === currentHash,

@@ -237,6 +237,7 @@ main{margin-left:var(--rail);padding:30px 34px 90px;max-width:1500px}
   <div class="login-card">
     <b>Amedeo's</b>
     <div class="sub">Back Office</div>
+    <input id="uname" placeholder="Username" autocomplete="username" autocapitalize="off" style="margin-bottom:10px"/>
     <input type="password" id="pw" placeholder="Password" autocomplete="current-password"/>
     <button class="btn block" id="loginBtn" style="margin-top:14px">Sign in</button>
     <p class="err" id="loginErr"></p>
@@ -247,7 +248,10 @@ main{margin-left:var(--rail);padding:30px 34px 90px;max-width:1500px}
   <aside class="rail">
     <div class="brand"><b>Amedeo's</b><span>Back Office</span></div>
     <nav id="nav"></nav>
-    <div class="foot"><button id="signout">Sign out</button></div>
+    <div class="foot">
+      <div id="whoami" style="color:rgba(255,255,255,.4);font-size:.68rem;margin-bottom:8px">&nbsp;</div>
+      <button id="signout">Sign out</button>
+    </div>
   </aside>
 
   <main>
@@ -330,7 +334,7 @@ var SECTIONS = [
   {id:"settings",  label:"Settings",  crumb:"Configuration", icon:IC.set}
 ];
 
-var S = { view:"dashboard", stats:null, bookings:[], customers:[], invoices:[],
+var S = { me:null, view:"dashboard", stats:null, bookings:[], customers:[], invoices:[],
           settings:null, cal:{mode:"month", anchor:null, data:null} };
 
 /* ---------- shell ---------- */
@@ -1307,6 +1311,12 @@ function viewSettings(){
           : 'You are still signing in with the original setup password. Change it here to take ownership of the account — that also retires the setup password for good.') +
       '</p></div></div>' +
 
+      ((S.me && S.me.role === "owner")
+        ? '<div class="panel"><div class="ph"><h3>Who can sign in</h3>' +
+            '<button class="btn ghost sm" id="addUser">Add a login</button></div>' +
+            '<div class="pb flush" id="userList"><div class="empty">Loading…</div></div></div>'
+        : '') +
+
       '<div class="panel"><div class="ph"><h3>Signed-in devices</h3>' +
         '<button class="btn ghost sm" id="revokeAll">Sign out everywhere else</button></div>' +
         '<div class="pb flush" id="sessList"><div class="empty">Loading…</div></div></div>' +
@@ -1365,6 +1375,10 @@ function viewSettings(){
 
     loadSessions();
     loadAudit();
+    if (S.me && S.me.role === "owner"){
+      loadUsers();
+      gid("addUser").onclick = function(){ openUserForm(); };
+    }
     gid("revokeAll").onclick = function(){
       api("/api/sessions/revoke-all", {method:"POST"}).then(function(rr){
         toast(rr.ok ? "Every other device signed out" : "Could not do that");
@@ -1386,6 +1400,69 @@ function viewSettings(){
   });
 }
 
+function loadUsers(){
+  api("/api/users").then(function(r){
+    var box = gid("userList");
+    if (!box) return;
+    var list = (r.ok && r.data.users) || [];
+    if (!list.length){ box.innerHTML = '<div class="empty">No logins yet.</div>'; return; }
+    box.innerHTML = list.map(function(u){
+      return '<div class="row" data-user="' + u.id + '"><div>' +
+        '<div class="t">' + esc(u.name || u.username) +
+          '<span class="pill ' + (u.active ? "paid" : "void") + '">' + (u.active ? esc(u.role) : "disabled") + '</span></div>' +
+        '<div class="m">' + esc(u.username) +
+          (u.last_login_at ? ' · last signed in ' + esc(u.last_login_at.slice(0,16)) : ' · never signed in') + '</div>' +
+        '</div><span style="font-size:.72rem;color:var(--muted)">edit</span></div>';
+    }).join("");
+    var rows = box.querySelectorAll("[data-user]");
+    for (var i=0;i<rows.length;i++){
+      (function(el){
+        var u = list.filter(function(x){ return String(x.id) === el.getAttribute("data-user"); })[0];
+        el.onclick = function(){ openUserForm(u); };
+      })(rows[i]);
+    }
+  });
+}
+
+function openUserForm(u){
+  var editing = Boolean(u);
+  drawer(
+    '<h2>' + (editing ? esc(u.name || u.username) : "Add a login") + '</h2>' +
+    '<div class="sub">' + (editing ? esc(u.username) : "Their own username and password.") + '</div>' +
+    (editing ? '' :
+      '<div class="field"><label>Username</label><input id="uUser" autocapitalize="off" placeholder="matt"/></div>') +
+    '<div class="field"><label>Full name</label><input id="uName" value="' + esc(editing ? (u.name || "") : "") + '"/></div>' +
+    '<div class="field"><label>Role</label><select id="uRole">' +
+      '<option value="owner"' + (editing && u.role === "owner" ? " selected" : "") + '>Owner — everything, including logins</option>' +
+      '<option value="driver"' + (editing && u.role === "driver" ? " selected" : "") + '>Driver — everything except managing logins</option>' +
+    '</select></div>' +
+    '<div class="field"><label>' + (editing ? "New password (leave blank to keep)" : "Password") + '</label>' +
+      '<input type="password" id="uPass" autocomplete="new-password"/></div>' +
+    (editing
+      ? '<div class="field"><label>Access</label><select id="uActive">' +
+          '<option value="1"' + (u.active ? " selected" : "") + '>Can sign in</option>' +
+          '<option value="0"' + (!u.active ? " selected" : "") + '>Disabled</option></select></div>'
+      : '') +
+    '<p class="err" id="uErr"></p>' +
+    '<button class="btn block" id="uSave">' + (editing ? "Save" : "Create the login") + '</button>' +
+    '<button class="btn ghost block" id="uCancel" style="margin-top:9px">Cancel</button>'
+  );
+  gid("uCancel").onclick = closeDrawer;
+  gid("uSave").onclick = function(){
+    var b = gid("uSave"); b.disabled = true;
+    var body = { name: gid("uName").value.trim(), role: gid("uRole").value };
+    if (gid("uPass").value) body.password = gid("uPass").value;
+    if (!editing){ body.username = gid("uUser").value.trim(); }
+    if (editing) body.active = gid("uActive").value === "1";
+    var path = editing ? "/api/users/" + u.id : "/api/users";
+    api(path, {method: editing ? "PATCH" : "POST", body: body}).then(function(r){
+      b.disabled = false;
+      if (!r.ok){ gid("uErr").textContent = (r.data && r.data.error) || "Could not save that."; return; }
+      closeDrawer(); toast(editing ? "Saved" : "Login created"); loadUsers();
+    });
+  };
+}
+
 function loadSessions(){
   api("/api/sessions").then(function(r){
     var box = gid("sessList");
@@ -1394,7 +1471,8 @@ function loadSessions(){
     if (!list.length){ box.innerHTML = '<div class="empty">No active sessions.</div>'; return; }
     box.innerHTML = list.map(function(x){
       return '<div class="row" style="cursor:default"><div>' +
-        '<div class="t">' + esc(x.device) + (x.current ? '<span class="pill paid">this device</span>' : '') + '</div>' +
+        '<div class="t">' + esc(x.username || "shared login") + ' · ' + esc(x.device) +
+          (x.current ? '<span class="pill paid">this device</span>' : '') + '</div>' +
         '<div class="m">' + esc(x.ip || "unknown IP") + ' · last used ' + esc((x.lastSeenAt || x.createdAt || "").slice(0,16)) + '</div>' +
         '</div>' +
         (x.current ? '<span style="font-size:.75rem;color:var(--muted)">active</span>'
@@ -1442,20 +1520,28 @@ function conn(label, on, detail){
 function enterApp(){
   gid("login").style.display = "none";
   gid("app").style.display = "block";
-  paintNav();
-  go("dashboard");
+  api("/api/me/detail").then(function(r){
+    S.me = (r.ok && r.data) || {role:"owner"};
+    var f = gid("whoami");
+    if (f) f.textContent = S.me.username ? (S.me.name || S.me.username) + " · " + S.me.role : "Signed in";
+    paintNav();
+    go("dashboard");
+  });
 }
 
 function doLogin(){
   var b = gid("loginBtn"); b.disabled = true;
-  api("/admin/login", {method:"POST", body:{password: gid("pw").value}}).then(function(r){
+  api("/admin/login", {method:"POST", body:{
+    username: gid("uname").value.trim(), password: gid("pw").value
+  }}).then(function(r){
     b.disabled = false;
-    if (r.ok) enterApp();
-    else gid("loginErr").textContent = "That password is not right.";
+    if (r.ok){ enterApp(); return; }
+    gid("loginErr").textContent = (r.data && r.data.error) || "That is not right.";
   });
 }
 gid("loginBtn").onclick = doLogin;
 gid("pw").addEventListener("keydown", function(e){ if (e.key === "Enter") doLogin(); });
+gid("uname").addEventListener("keydown", function(e){ if (e.key === "Enter") gid("pw").focus(); });
 gid("signout").onclick = function(){
   api("/admin/logout", {method:"POST"}).then(function(){ location.reload(); });
 };

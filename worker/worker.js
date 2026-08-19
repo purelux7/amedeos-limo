@@ -28,7 +28,11 @@ import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
 import { BACKOFFICE_HTML } from "./backoffice-ui.js";
 import { createBooking, updateBooking, cancelBooking, refundInvoice } from "./admin-bookings.js";
-import { audit, auditList } from "./audit.js";
+import { audit, auditList, setActor } from "./audit.js";
+import {
+  anyUsers, authenticate, getUserById, listUsers, createUser, updateUser,
+  changeOwnPassword,
+} from "./users.js";
 import {
   createSession, validSession, destroySession, revokeAll, listSessions,
   cookieHeader, CLEAR_COOKIE, loginBlocked, noteFailure, clearFailures,
@@ -183,12 +187,25 @@ export default {
           return json({ error: "Too many attempts. Try again in a few minutes." }, 429, cors);
         }
         const body = await request.json().catch(() => ({}));
-        if (!(await checkAdminPassword(env, body.password))) {
+
+        // Once real users exist, the shared password is finished. Before
+        // that it is the only way in, so it stays — that is what lets an
+        // existing installation upgrade without locking itself out.
+        let userId = null;
+        if (await anyUsers(env)) {
+          const user = await authenticate(env, body.username, body.password);
+          if (!user) {
+            await noteFailure(env, ip);
+            return json({ error: "Wrong username or password" }, 401, cors);
+          }
+          userId = user.id;
+        } else if (!(await checkAdminPassword(env, body.password))) {
           await noteFailure(env, ip);
           return json({ error: "Wrong password" }, 401, cors);
         }
+
         await clearFailures(env, ip);
-        const { token, maxAge } = await createSession(env, request);
+        const { token, maxAge } = await createSession(env, request, userId);
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
@@ -210,7 +227,41 @@ export default {
 
       // ---------- protected API ----------
       if (path.startsWith("/api/")) {
-        if (!(await isAuthed(request, env))) return json({ error: "Unauthorized" }, 401, cors);
+        const session = await validSession(env, request);
+        if (!session) return json({ error: "Unauthorized" }, 401, cors);
+
+        // Resolve who is acting once per request, so the audit trail can
+        // name them and role checks have something to check.
+        const me = session.user_id ? await getUserById(env, session.user_id) : null;
+        setActor(request, me ? me.username : "owner");
+        const isOwner = !me || me.role === "owner";   // pre-users sessions are the owner
+
+        if (path === "/api/me/detail" && method === "GET") {
+          return json({
+            username: me ? me.username : null,
+            name: me ? me.name : null,
+            role: me ? me.role : "owner",
+            legacy: !me,
+          }, 200, cors);
+        }
+
+        // ---------- users ----------
+        if (path === "/api/users" && method === "GET") {
+          if (!isOwner) return json({ error: "Owners only." }, 403, cors);
+          return await listUsers(env, cors);
+        }
+        if (path === "/api/users" && method === "POST") {
+          if (!isOwner) return json({ error: "Owners only." }, 403, cors);
+          return await createUser(request, env, cors, me);
+        }
+        const mUser = path.match(/^\/api\/users\/(\d+)$/);
+        if (mUser && (method === "PATCH" || method === "POST")) {
+          if (!isOwner) return json({ error: "Owners only." }, 403, cors);
+          return await updateUser(request, env, cors, Number(mUser[1]), me);
+        }
+        if (path === "/api/password" && method === "POST" && me) {
+          return await changeOwnPassword(request, env, cors, me);
+        }
 
         if (path === "/api/bookings" && method === "GET") {
           const { results } = await env.DB.prepare(

@@ -7,11 +7,24 @@
    the action it is describing.
    ============================================================ */
 
+/* Who is acting. Kept in a WeakMap keyed by the Request rather than
+   threaded through twenty call sites, and rather than bolted onto the
+   Request object, which is not ours to decorate. */
+const ACTORS = new WeakMap();
+
+export function setActor(request, actor) {
+  if (request && actor) ACTORS.set(request, actor);
+}
+
+export function getActor(request) {
+  return (request && ACTORS.get(request)) || null;
+}
+
 export async function audit(env, request, { action, entity, entityId, summary, detail }) {
   try {
     await env.DB.prepare(
-      `INSERT INTO audit_log (action, entity, entity_id, summary, detail, ip, user_agent)
-       VALUES (?,?,?,?,?,?,?)`
+      `INSERT INTO audit_log (action, entity, entity_id, summary, detail, ip, user_agent, actor)
+       VALUES (?,?,?,?,?,?,?,?)`
     ).bind(
       String(action).slice(0, 60),
       entity ? String(entity).slice(0, 30) : null,
@@ -19,7 +32,8 @@ export async function audit(env, request, { action, entity, entityId, summary, d
       summary ? String(summary).slice(0, 400) : null,
       detail ? JSON.stringify(detail).slice(0, 2000) : null,
       request ? String(request.headers.get("CF-Connecting-IP") || "").slice(0, 60) : null,
-      request ? String(request.headers.get("User-Agent") || "").slice(0, 200) : null
+      request ? String(request.headers.get("User-Agent") || "").slice(0, 200) : null,
+      getActor(request)
     ).run();
   } catch (e) {
     console.log("audit write failed:", e && e.message);
