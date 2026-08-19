@@ -27,6 +27,10 @@ import {
 import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
 import { BACKOFFICE_HTML } from "./backoffice-ui.js";
+import {
+  createSession, validSession, destroySession, revokeAll, listSessions,
+  cookieHeader, CLEAR_COOKIE, loginBlocked, noteFailure, clearFailures,
+} from "./sessions.js";
 import { PAY_HTML } from "./paypage.js";
 import {
   checkAdminPassword, changePassword, stats,
@@ -171,26 +175,31 @@ export default {
 
       // ---------- auth ----------
       if (path === "/admin/login" && method === "POST") {
+        const ip = request.headers.get("CF-Connecting-IP") || "";
+        const blocked = await loginBlocked(env, ip);
+        if (blocked) {
+          return json({ error: "Too many attempts. Try again in a few minutes." }, 429, cors);
+        }
         const body = await request.json().catch(() => ({}));
         if (!(await checkAdminPassword(env, body.password))) {
+          await noteFailure(env, ip);
           return json({ error: "Wrong password" }, 401, cors);
         }
-        const token = await sessionToken(env);
+        await clearFailures(env, ip);
+        const { token, maxAge } = await createSession(env, request);
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Set-Cookie": `afacs=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+            "Set-Cookie": cookieHeader(token, maxAge),
           },
         });
       }
       if (path === "/admin/logout" && method === "POST") {
+        await destroySession(env, request);
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Set-Cookie": "afacs=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
-          },
+          headers: { "Content-Type": "application/json", "Set-Cookie": CLEAR_COOKIE },
         });
       }
       if (path === "/api/me" && method === "GET") {
@@ -254,6 +263,20 @@ export default {
         if (path === "/api/run-digest" && method === "POST") {
           const out = await runDigest(env);
           return json(out, 200, cors);
+        }
+
+        // ---------- sessions ----------
+        if (path === "/api/sessions" && method === "GET") {
+          return json({ sessions: await listSessions(env, request) }, 200, cors);
+        }
+        if (path === "/api/sessions/revoke-all" && method === "POST") {
+          await revokeAll(env, request, { keepCurrent: true });
+          return json({ ok: true }, 200, cors);
+        }
+        const mSess = path.match(/^\/api\/sessions\/(\d+)$/);
+        if (mSess && method === "DELETE") {
+          await env.DB.prepare(`DELETE FROM admin_sessions WHERE id = ?`).bind(Number(mSess[1])).run();
+          return json({ ok: true }, 200, cors);
         }
 
         // ---------- back office ----------
@@ -529,26 +552,13 @@ async function geocode(query, env) {
 
 /* ---------------- auth ---------------- */
 
-async function sessionToken(env) {
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(env.ADMIN_PASSWORD || "x"),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("afacs-admin-v1"));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
+/* Authentication is a session lookup now. Note what is NOT here any
+   more: a dependency on env.ADMIN_PASSWORD. The old isAuthed returned
+   false whenever that secret was absent, so removing the secret — the
+   natural thing to do once the password lives in the database — would
+   have locked everyone out of the admin permanently. */
 async function isAuthed(request, env) {
-  if (!env.ADMIN_PASSWORD) return false;
-  const cookie = request.headers.get("Cookie") || "";
-  const m = cookie.match(/(?:^|;\s*)afacs=([a-f0-9]+)/);
-  if (!m) return false;
-  const expected = await sessionToken(env);
-  // constant-time-ish compare
-  if (m[1].length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= m[1].charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0;
+  return Boolean(await validSession(env, request));
 }
 
 /* ---------------- helpers ---------------- */

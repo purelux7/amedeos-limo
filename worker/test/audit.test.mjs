@@ -71,7 +71,11 @@ section("A. Schema and seed data");
   const s = await loadSettings(env);
   check("no auto-gratuity", s.gratuityPct, 0);
   check("tip default 20%", s.tipDefaultPct, 20);
-  check("tip options", s.tipOptions, [20, 22.5, 25, 30]);
+  // Migration 004 added 15% and 18% at the operator's request. This
+  // assertion tracked migration 003 only because the harness stopped
+  // applying migrations there — it was asserting a state production has
+  // not been in for weeks.
+  check("tip options", s.tipOptions, [15, 18, 20, 22.5, 25, 30]);
   check("charges at booking", s.chargeAtBooking, true);
   check("charge lead 24h", s.chargeLeadHours, 24);
   check("timezone", s.tz, TZ);

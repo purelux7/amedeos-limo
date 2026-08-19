@@ -1136,9 +1136,13 @@ function viewSettings(){
       '<button class="btn sm" id="pwSave">Change password</button>' +
       '<p style="font-size:.8rem;color:var(--muted);margin-top:12px">' +
         (r.data.passwordIsCustom
-          ? 'Your password is stored here, hashed. Changing it takes effect immediately.'
-          : 'You are still signing in with the original setup password. Change it here to take ownership of the account.') +
-      '</p></div></div>';
+          ? 'Your password is stored here as a hash. Changing it signs out every other device immediately.'
+          : 'You are still signing in with the original setup password. Change it here to take ownership of the account — that also retires the setup password for good.') +
+      '</p></div></div>' +
+
+      '<div class="panel"><div class="ph"><h3>Signed-in devices</h3>' +
+        '<button class="btn ghost sm" id="revokeAll">Sign out everywhere else</button></div>' +
+        '<div class="pb flush" id="sessList"><div class="empty">Loading…</div></div></div>';
 
     html += '<div class="panel"><div class="ph"><h3>Connections</h3></div><div class="pb">' +
       conn("Email (Resend)", r.data.integrations.resend, r.data.notifications.from) +
@@ -1181,6 +1185,14 @@ function viewSettings(){
       })(rsaves[k]);
     }
 
+    loadSessions();
+    gid("revokeAll").onclick = function(){
+      api("/api/sessions/revoke-all", {method:"POST"}).then(function(rr){
+        toast(rr.ok ? "Every other device signed out" : "Could not do that");
+        loadSessions();
+      });
+    };
+
     gid("pwSave").onclick = function(){
       var cur = gid("pwCur").value, nw = gid("pwNew").value, nw2 = gid("pwNew2").value;
       if (nw !== nw2){ toast("The two new passwords do not match"); return; }
@@ -1192,6 +1204,35 @@ function viewSettings(){
         else toast((rr.data && rr.data.error) || "Could not change it");
       });
     };
+  });
+}
+
+function loadSessions(){
+  api("/api/sessions").then(function(r){
+    var box = gid("sessList");
+    if (!box) return;
+    var list = (r.ok && r.data.sessions) || [];
+    if (!list.length){ box.innerHTML = '<div class="empty">No active sessions.</div>'; return; }
+    box.innerHTML = list.map(function(x){
+      return '<div class="row" style="cursor:default"><div>' +
+        '<div class="t">' + esc(x.device) + (x.current ? '<span class="pill paid">this device</span>' : '') + '</div>' +
+        '<div class="m">' + esc(x.ip || "unknown IP") + ' · last used ' + esc((x.lastSeenAt || x.createdAt || "").slice(0,16)) + '</div>' +
+        '</div>' +
+        (x.current ? '<span style="font-size:.75rem;color:var(--muted)">active</span>'
+                   : '<button class="btn ghost sm" data-sess="' + x.id + '">Sign out</button>') +
+        '</div>';
+    }).join("");
+    var bs = box.querySelectorAll("[data-sess]");
+    for (var i=0;i<bs.length;i++){
+      (function(b){
+        b.onclick = function(){
+          api("/api/sessions/" + b.getAttribute("data-sess"), {method:"DELETE"}).then(function(rr){
+            toast(rr.ok ? "Signed out" : "Could not sign that out");
+            loadSessions();
+          });
+        };
+      })(bs[i]);
+    }
   });
 }
 

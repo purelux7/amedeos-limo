@@ -12,6 +12,7 @@
    ============================================================ */
 
 import { loadSettings, loadRates, money } from "./engine.js";
+import { revokeAll } from "./sessions.js";
 
 function json(body, status, cors) {
   return new Response(JSON.stringify(body), {
@@ -102,6 +103,13 @@ export async function changePassword(request, env, cors) {
     return json({ error: "That is the password you already have." }, 422, cors);
   }
   await putSetting(env, "admin_password_hash", await hashPassword(next));
+
+  // Changing the password has to mean something. Every other session is
+  // revoked here — the phone left in a taxi, the browser on a hotel
+  // computer, a cookie someone copied. The session making the change
+  // survives, so Matt is not thrown out of the screen he is standing in.
+  await revokeAll(env, request, { keepCurrent: true });
+
   return json({ ok: true }, 200, cors);
 }
 
