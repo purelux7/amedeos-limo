@@ -99,7 +99,14 @@ section("Password — hashing");
 
 const h = await hashPassword("a-good-long-password");
 ok("hash is not the password", h.indexOf("a-good-long-password") === -1);
-ok("hash is pbkdf2 with a real iteration count", /^pbkdf2\$2\d{5}\$/.test(h));
+/* The Workers runtime refuses PBKDF2 above 100,000 iterations and throws
+   at deriveBits. Local workerd does not enforce it, so a value that is too
+   high passes every test and every dev run and then 500s in production the
+   first time somebody changes their password. Assert the ceiling here. */
+const iterations = Number(h.split("$")[1]);
+ok("hash is pbkdf2", h.indexOf("pbkdf2$") === 0);
+ok("iterations are within the Workers cap of 100000", iterations <= 100000, "got " + iterations);
+ok("iterations are not trivially low", iterations >= 100000, "got " + iterations);
 ok("correct password verifies", await verifyPassword("a-good-long-password", h));
 ok("wrong password does not", !(await verifyPassword("a-good-long-passworD", h)));
 ok("garbage stored value does not crash", !(await verifyPassword("x", "nonsense")));

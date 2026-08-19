@@ -26,7 +26,18 @@ const enc = new TextEncoder();
 const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-const PBKDF2_ITERATIONS = 210000; // OWASP 2023 floor for PBKDF2-SHA256
+/* 100,000 is the ceiling, not a preference: the Cloudflare Workers
+   runtime refuses PBKDF2 above it —
+
+     Pbkdf2 failed: iteration counts above 100000 are not supported
+
+   — and throws at deriveBits, so anything higher turns "change my
+   password" into a 500. Local workerd does NOT enforce this, which is
+   why a change that worked in dev failed the moment it hit production.
+   Below OWASP's 2023 suggestion of 600k, and unavoidable here; the
+   mitigating facts are that this guards one account with a long random
+   password and that the hash is not internet-reachable. */
+const PBKDF2_ITERATIONS = 100000;
 
 async function derive(password, salt, iterations = PBKDF2_ITERATIONS) {
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -59,8 +70,16 @@ export async function verifyPassword(password, stored) {
   if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
   const iterations = Number(parts[1]);
   if (!Number.isFinite(iterations) || iterations < 1000) return false;
-  const candidate = await derive(password, unb64(parts[2]), iterations);
-  return sameDigest(candidate, parts[3]);
+  // Fail closed rather than 500. A hash written by a runtime with a
+  // higher cap cannot be verified here, and the honest answer to that
+  // is "wrong password", not a stack trace.
+  try {
+    const candidate = await derive(password, unb64(parts[2]), iterations);
+    return sameDigest(candidate, parts[3]);
+  } catch (e) {
+    console.log("password verify failed:", e && e.message);
+    return false;
+  }
 }
 
 async function getSetting(env, key) {
