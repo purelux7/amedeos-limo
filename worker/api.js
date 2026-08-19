@@ -572,14 +572,31 @@ export async function handleBlackouts(request, url, env, cors, method) {
       return json({ error: "from=YYYY-MM-DD required" }, 422, cors);
     }
     const to = /^\d{4}-\d{2}-\d{2}$/.test(d.to || "") ? d.to : d.from;
-    const start = localToUtc(d.from, "00:00", settings.tz);
-    // end is the start of the day AFTER `to`, so a single-day block covers it fully
-    const endBase = localToUtc(to, "00:00", settings.tz);
-    const end = endBase + 86_400_000;
+
+    // Part-day blocks. An all-day block is still the default, because that
+    // is what most time off actually is, but "I have a dentist at 2" needs
+    // to take two hours out of a day rather than the whole day.
+    const HHMM = /^\d{2}:\d{2}$/;
+    const partial = HHMM.test(d.startTime || "") && HHMM.test(d.endTime || "");
+
+    let start, end, allDay;
+    if (partial) {
+      start = localToUtc(d.from, d.startTime, settings.tz);
+      end = localToUtc(to, d.endTime, settings.tz);
+      allDay = 0;
+      if (!(end > start)) {
+        return json({ error: "The end time has to be after the start time." }, 422, cors);
+      }
+    } else {
+      start = localToUtc(d.from, "00:00", settings.tz);
+      // end is the start of the day AFTER `to`, so a single-day block covers it fully
+      end = localToUtc(to, "00:00", settings.tz) + 86_400_000;
+      allDay = 1;
+    }
 
     const res = await env.DB.prepare(
-      `INSERT INTO blackouts (start_utc, end_utc, label, all_day) VALUES (?,?,?,1)`
-    ).bind(start, end, d.label || "Unavailable").run();
+      `INSERT INTO blackouts (start_utc, end_utc, label, all_day) VALUES (?,?,?,?)`
+    ).bind(start, end, d.label || "Unavailable", allDay).run();
     return json({ ok: true, id: res.meta.last_row_id }, 200, cors);
   }
 

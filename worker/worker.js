@@ -26,7 +26,13 @@ import {
 } from "./api.js";
 import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
+import { BACKOFFICE_HTML } from "./backoffice-ui.js";
 import { PAY_HTML } from "./paypage.js";
+import {
+  checkAdminPassword, changePassword, stats,
+  customerDetail, updateCustomer,
+  getSettings, patchSettings, patchRate,
+} from "./backoffice.js";
 import {
   listInvoices, getInvoice, createInvoice, updateInvoice,
   sendInvoiceEmail, sendInvoiceSms, voidInvoice,
@@ -139,17 +145,34 @@ export default {
         return await payCharge(request, env, cors, mPayApi[1]);
       }
 
-      // ---------- dashboard page ----------
+      // ---------- admin pages ----------
+      // /admin is the back office. The original phone-first dashboard stays
+      // reachable at /admin/classic: it is proven, it works one-handed at
+      // 5am, and retiring it the same day the replacement ships would be
+      // taking away the tool Matt actually uses before the new one has
+      // earned its place.
       if (path === "/admin" && method === "GET") {
+        return new Response(BACKOFFICE_HTML, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      if (path === "/admin/classic" && method === "GET") {
         return new Response(renderDashboard(), {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
         });
       }
 
       // ---------- auth ----------
       if (path === "/admin/login" && method === "POST") {
         const body = await request.json().catch(() => ({}));
-        if (!env.ADMIN_PASSWORD || body.password !== env.ADMIN_PASSWORD) {
+        if (!(await checkAdminPassword(env, body.password))) {
           return json({ error: "Wrong password" }, 401, cors);
         }
         const token = await sessionToken(env);
@@ -231,6 +254,31 @@ export default {
         if (path === "/api/run-digest" && method === "POST") {
           const out = await runDigest(env);
           return json(out, 200, cors);
+        }
+
+        // ---------- back office ----------
+        if (path === "/api/stats" && method === "GET") {
+          return await stats(env, cors);
+        }
+        const mCust = path.match(/^\/api\/customers\/(\d+)$/);
+        if (mCust && method === "GET") {
+          return await customerDetail(env, cors, Number(mCust[1]));
+        }
+        if (mCust && (method === "PATCH" || method === "POST")) {
+          return await updateCustomer(request, env, cors, Number(mCust[1]));
+        }
+        if (path === "/api/settings" && method === "GET") {
+          return await getSettings(env, cors);
+        }
+        if (path === "/api/settings" && method === "PATCH") {
+          return await patchSettings(request, env, cors);
+        }
+        const mRate = path.match(/^\/api\/rates\/([A-Z0-9_]{1,20})$/);
+        if (mRate && method === "PATCH") {
+          return await patchRate(request, env, cors, mRate[1]);
+        }
+        if (path === "/api/password" && method === "POST") {
+          return await changePassword(request, env, cors);
         }
 
         // ---------- invoicing ----------

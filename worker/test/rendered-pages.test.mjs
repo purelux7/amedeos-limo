@@ -13,6 +13,7 @@ import { check, ok, section, T } from "./harness.mjs";
 const W = new URL("..", import.meta.url).pathname;
 const { PAY_HTML } = await import(`${W}/paypage.js`);
 const { DASHBOARD_HTML } = await import(`${W}/dashboard.js`);
+const { BACKOFFICE_HTML } = await import(`${W}/backoffice-ui.js`);
 
 section("Rendered pages — regex escaping survives the template literal");
 
@@ -35,6 +36,16 @@ ok("payment page has no de-escaped \\d in its regexes", payBad.length === 0, pay
 
 const dashBad = brokenClasses(DASHBOARD_HTML, "dashboard");
 ok("dashboard has no de-escaped \\d in its regexes", dashBad.length === 0, dashBad.join(" | "));
+
+const boBad = brokenClasses(BACKOFFICE_HTML, "back office");
+ok("back office has no de-escaped \\d in its regexes", boBad.length === 0, boBad.join(" | "));
+
+section("Rendered pages — the back office ships whole");
+ok("back office has all six sections",
+  ["dashboard","calendar","rides","customers","invoices","settings"]
+    .every(function(v){ return BACKOFFICE_HTML.indexOf('id:"' + v + '"') !== -1; }));
+ok("back office can change its own password", BACKOFFICE_HTML.indexOf("/api/password") !== -1);
+ok("back office is noindex", BACKOFFICE_HTML.indexOf("noindex") !== -1);
 
 section("Rendered pages — the billing ZIP check actually accepts a ZIP");
 
