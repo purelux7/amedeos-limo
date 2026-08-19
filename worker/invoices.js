@@ -512,10 +512,25 @@ export async function payCharge(request, env, cors, token) {
     return json({ error: "Please re-enter the card details." }, 422, cors);
   }
 
+  // The ZIP is not optional. Without it Authorize.net has nothing to check
+  // the address against and returns AVS "P" — not applicable — which means
+  // a stolen card number sails through a link anyone can open. The booking
+  // form has always required it; this path must too, and must enforce it
+  // server-side because the browser check is trivially bypassed.
+  const zip = String(d.zip || "").trim();
+  if (!/^\d{5}(-?\d{4})?$/.test(zip)) {
+    return json({ error: "Enter the billing ZIP for this card." }, 422, cors);
+  }
+
+  // Names go on the merchant record, so keep them to something that reads
+  // like a name — an admin placeholder in the customer row must not end up
+  // stamped on an Authorize.net transaction.
+  const nameParts = String(inv.customer_name || "").trim().split(/\s+/);
+  const looksLikeName = nameParts.length > 0 && String(inv.customer_name || "").length <= 60;
   const billTo = {
-    firstName: String(d.firstName || (inv.customer_name || "").split(" ")[0] || "Customer").slice(0, 50),
-    lastName: String(d.lastName || (inv.customer_name || "").split(" ").slice(1).join(" ") || "Rider").slice(0, 50),
-    zip: String(d.zip || "").slice(0, 20),
+    firstName: String(d.firstName || (looksLikeName && nameParts[0]) || "Customer").slice(0, 50),
+    lastName: String(d.lastName || (looksLikeName && nameParts.slice(1).join(" ")) || "Rider").slice(0, 50),
+    zip: zip.slice(0, 20),
   };
 
   try {
@@ -587,6 +602,18 @@ export async function payCharge(request, env, cors, token) {
 
     // Receipt, best effort — a failed receipt must never look like a
     // failed payment to someone whose card was just charged.
+    //
+    // But it must not vanish silently either: a customer who pays and gets
+    // nothing reasonably concludes the payment failed. Every outcome,
+    // including "there was no address to send to", lands in message_log so
+    // the admin can see why no receipt went out.
+    if (!inv.customer_email) {
+      await logMessage(env, {
+        invoiceId: inv.id, customerId: inv.customer_id, channel: "email",
+        subject: `Receipt ${inv.number}`, status: "failed",
+        detail: "Paid, but no email address on file — no receipt was sent.",
+      });
+    }
     if (inv.customer_email) {
       try {
         await send(env, {
@@ -600,7 +627,17 @@ export async function payCharge(request, env, cors, token) {
                  </div>`,
           text: `Payment received. Invoice ${inv.number} — $${money(inv.total)}.`,
         });
-      } catch (e) { /* receipt is not the transaction */ }
+        await logMessage(env, {
+          invoiceId: inv.id, customerId: inv.customer_id, channel: "email",
+          to: inv.customer_email, subject: `Receipt ${inv.number}`, status: "sent",
+        });
+      } catch (e) {
+        await logMessage(env, {
+          invoiceId: inv.id, customerId: inv.customer_id, channel: "email",
+          to: inv.customer_email, subject: `Receipt ${inv.number}`,
+          status: "failed", detail: String((e && e.message) || e).slice(0, 300),
+        });
+      }
     }
 
     return json({ ok: true, transId: paid.transId, last4, total: inv.total }, 200, cors);

@@ -131,7 +131,7 @@ input:focus{outline:none;border-color:var(--gold)}
           '<div class="field"><label for="exp">Expiry</label><input id="exp" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="09/29"/></div>' +
           '<div class="field"><label for="cvv">CVV</label><input id="cvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123"/></div>' +
         '</div>' +
-        '<div class="field"><label for="zip">Billing ZIP</label><input id="zip" inputmode="numeric" maxlength="10" placeholder="34994"/></div>' +
+        '<div class="field"><label for="zip">Billing ZIP</label><input id="zip" inputmode="numeric" maxlength="10" autocomplete="postal-code"/></div>' +
         '<button class="btn" id="pay">Pay $' + money(inv.total) + '</button>' +
         '<p class="err" id="err"></p>' +
         '<p class="note">Secure payment &middot; Authorize.net</p>' +
@@ -168,6 +168,7 @@ input:focus{outline:none;border-color:var(--gold)}
     if (num.length < 13) return fail("Please check the card number.");
     if (exp.length !== 2 || exp[0].length !== 2) return fail("Please check the expiry date.");
     if (cvv.length < 3) return fail("Please check the CVV.");
+    if (!/^\d{5}(-?\d{4})?$/.test(zip)) return fail("Enter the billing ZIP for this card.");
 
     if (!window.Accept || !data.payments.enabled) {
       return fail("Card payments are unavailable. Please call 848-667-0999.");
