@@ -166,21 +166,48 @@ export async function createInvoice(request, env, cors) {
   const d = await request.json().catch(() => ({}));
 
   let customerId = d.customerId ? Number(d.customerId) : null;
-  // A name and one of email/phone is enough to bill someone who has
-  // never booked online. Reuse the booking form's customer table so
-  // the invoice shows up on their record.
+  // A name and one of email/phone is enough to bill someone who has never
+  // booked online.
+  //
+  // This MUST go through upsertCustomer rather than matching on its own.
+  // An earlier version here looked up by email and only fell back to phone
+  // when no email was given — so invoicing a repeat rider from a second
+  // email address hit the UNIQUE(phone) constraint and 500'd. upsertCustomer
+  // matches on either column and merges, which is the behaviour the booking
+  // form has always had.
   if (!customerId && d.name) {
-    const existing = d.email
-      ? await env.DB.prepare(`SELECT id FROM customers WHERE email = ?`).bind(String(d.email).toLowerCase()).first()
-      : d.phone
-        ? await env.DB.prepare(`SELECT id FROM customers WHERE phone = ?`).bind(String(d.phone)).first()
-        : null;
+    const e = d.email ? String(d.email).trim().toLowerCase() : null;
+    const ph = d.phone ? String(d.phone).trim() : null;
+
+    // Match on EITHER column — matching on email alone and inserting
+    // blind violates UNIQUE(phone) the moment a repeat rider is billed
+    // from a second address.
+    const existing = (e || ph)
+      ? await env.DB.prepare(
+          `SELECT id, name, email, phone FROM customers
+            WHERE (email IS NOT NULL AND email = ?) OR (phone IS NOT NULL AND phone = ?)
+            LIMIT 1`
+        ).bind(e, ph).first()
+      : null;
+
     if (existing) {
+      // Deliberately NOT upsertCustomer. That helper overwrites name and
+      // email, which is right for the booking form — the customer is
+      // typing their own details — and wrong here, where Matt typing a
+      // half-remembered name into an invoice would rename a real client
+      // and replace their address. Only genuinely empty fields are filled.
       customerId = existing.id;
+      const sets = [], vals = [];
+      if (!existing.email && e) { sets.push("email = ?"); vals.push(e); }
+      if (!existing.phone && ph) { sets.push("phone = ?"); vals.push(ph); }
+      if (sets.length) {
+        vals.push(customerId);
+        await env.DB.prepare(`UPDATE customers SET ${sets.join(", ")} WHERE id = ?`).bind(...vals).run();
+      }
     } else {
       const ins = await env.DB.prepare(
         `INSERT INTO customers (name, email, phone) VALUES (?,?,?)`
-      ).bind(String(d.name).slice(0, 120), d.email ? String(d.email).toLowerCase() : null, d.phone || null).run();
+      ).bind(String(d.name).slice(0, 120), e, ph).run();
       customerId = ins.meta.last_row_id;
     }
   }
