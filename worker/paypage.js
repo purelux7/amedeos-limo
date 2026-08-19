@@ -168,7 +168,10 @@ input:focus{outline:none;border-color:var(--gold)}
     if (num.length < 13) return fail("Please check the card number.");
     if (exp.length !== 2 || exp[0].length !== 2) return fail("Please check the expiry date.");
     if (cvv.length < 3) return fail("Please check the CVV.");
-    if (!/^\d{5}(-?\d{4})?$/.test(zip)) return fail("Enter the billing ZIP for this card.");
+    // Double backslash: this whole page is a JS template literal, so "\d"
+    // collapses to a literal "d" before the browser ever sees it. The card
+    // and expiry handlers above use \\D for the same reason.
+    if (!/^\\d{5}(-?\\d{4})?$/.test(zip)) return fail("Enter the billing ZIP for this card.");
 
     if (!window.Accept || !data.payments.enabled) {
       return fail("Card payments are unavailable. Please call 848-667-0999.");
