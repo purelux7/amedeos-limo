@@ -21,6 +21,7 @@ import {
   describeCard,
 } from "./authnet.js";
 import { send, siteUrl, esc } from "./notify.js";
+import { audit } from "./audit.js";
 
 function json(body, status, cors) {
   return new Response(JSON.stringify(body), {
@@ -224,7 +225,11 @@ export async function createInvoice(request, env, cors) {
 
   const id = ins.meta.last_row_id;
   await writeItems(env, id, d.items);
-  await retotal(env, id);
+  const totals = await retotal(env, id);
+  await audit(env, request, {
+    action: "invoice.create", entity: "invoice", entityId: id,
+    summary: `Created invoice ${number} for $${money(totals.total)}`,
+  });
   return await getInvoice(env, cors, id);
 }
 
@@ -407,7 +412,7 @@ export async function sendInvoiceSms(env, cors, id) {
   );
 }
 
-export async function voidInvoice(env, cors, id) {
+export async function voidInvoice(env, cors, id, request) {
   const inv = await loadInvoice(env, id);
   if (!inv) return json({ error: "Not found" }, 404, cors);
   if (inv.status === "paid") {
@@ -416,6 +421,10 @@ export async function voidInvoice(env, cors, id) {
   await env.DB.prepare(
     `UPDATE invoices SET status = 'void', pay_token = NULL, updated_at = datetime('now') WHERE id = ?`
   ).bind(id).run();
+  await audit(env, request, {
+    action: "invoice.void", entity: "invoice", entityId: id,
+    summary: `Voided invoice ${inv.number} ($${money(inv.total)}); its pay link is now dead`,
+  });
   return json({ ok: true }, 200, cors);
 }
 

@@ -472,8 +472,10 @@ function wireRows(){
 function viewCalendar(){
   if (!S.cal.anchor) S.cal.anchor = todayStr();
   gid("headActions").innerHTML =
-    '<button class="btn ghost sm" id="addOff">Block time off</button>';
+    '<button class="btn ghost sm" id="addOff" style="margin-right:8px">Block time off</button>' +
+    '<button class="btn sm" id="addRide">New booking</button>';
   gid("addOff").onclick = function(){ openTimeOff(S.cal.anchor); };
+  gid("addRide").onclick = function(){ openBooking(S.cal.anchor); };
 
   gid("view").innerHTML =
     '<div class="calbar">' +
@@ -710,7 +712,7 @@ function wireCal(){
     (function(el){
       el.onclick = function(){
         var v = el.getAttribute("data-slot").split("T");
-        openTimeOff(v[0], v[1]);
+        openBooking(v[0], v[1] + ":00");
       };
     })(slots[j]);
   }
@@ -740,6 +742,110 @@ function openOff(id, label){
       else toast("Could not remove it");
     });
   };
+}
+
+/* Taking a booking over the phone. No card is collected: the customer
+   is not standing there to enter one, and an admin typing somebody
+   else's card number into a form is precisely the liability the public
+   booking flow was built to avoid. Payment is an invoice with a link. */
+function openBooking(dateStr, timeStr){
+  if (!S.customers.length || !S.settings){
+    Promise.all([
+      S.customers.length ? Promise.resolve(null) : api("/api/customers"),
+      S.settings ? Promise.resolve(null) : api("/api/settings")
+    ]).then(function(r){
+      if (r[0] && r[0].ok) S.customers = r[0].data.customers || [];
+      if (r[1] && r[1].ok) S.settings = r[1].data;
+      openBooking(dateStr, timeStr);
+    });
+    return;
+  }
+  var opts = (S.customers||[]).map(function(c){
+    return '<option value="' + c.id + '">' + esc(c.name) + (c.phone ? " · " + esc(c.phone) : "") + '</option>';
+  }).join("");
+  var rates = (S.settings && S.settings.rates) || [];
+  var rateOpts = rates.map(function(r){
+    return '<option value="' + esc(r.code) + '" data-price="' + r.price + '" data-hours="' + r.hours + '">' +
+      esc(r.label) + ' — $' + r.price + '</option>';
+  }).join("");
+
+  drawer(
+    '<h2>New booking</h2><div class="sub">Taken by phone. No card is charged.</div>' +
+    '<div class="field"><label>Customer</label><select id="bkCust"><option value="">— someone new —</option>' + opts + '</select></div>' +
+    '<div id="bkNew">' +
+      '<div class="field"><label>Name</label><input id="bkName"/></div>' +
+      '<div class="acts2">' +
+        '<div class="field"><label>Mobile</label><input id="bkPhone" inputmode="tel"/></div>' +
+        '<div class="field"><label>Email</label><input id="bkEmail" inputmode="email"/></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="acts2">' +
+      '<div class="field"><label>Date</label><input type="date" id="bkDate" value="' + esc(dateStr || todayStr()) + '"/></div>' +
+      '<div class="field"><label>Pickup time</label><input type="time" id="bkTime" step="900" value="' + esc(timeStr || "08:00") + '"/></div>' +
+    '</div>' +
+    '<div class="field"><label>Destination (sets the price and how long it blocks)</label>' +
+      '<select id="bkRate"><option value="">— custom trip —</option>' + rateOpts + '</select></div>' +
+    '<div class="field"><label>Pickup address</label><input id="bkPickup" placeholder="123 SE Ocean Blvd, Stuart"/></div>' +
+    '<div class="field"><label>Drop off</label><input id="bkDrop" placeholder="Terminal, hotel, address"/></div>' +
+    '<div class="acts2">' +
+      '<div class="field"><label>Price ($)</label><input id="bkPrice" inputmode="decimal" placeholder="0.00"/></div>' +
+      '<div class="field"><label>Hours it blocks</label><input id="bkHours" inputmode="decimal" placeholder="2"/></div>' +
+    '</div>' +
+    '<div class="acts2">' +
+      '<div class="field"><label>Passengers</label><input id="bkPax" inputmode="numeric" value="1"/></div>' +
+      '<div class="field"><label>Flight no.</label><input id="bkFlight" placeholder="AA1422"/></div>' +
+    '</div>' +
+    '<div class="field"><label>Notes</label><textarea id="bkNotes" rows="2" placeholder="Child seat, extra luggage, gate code…"></textarea></div>' +
+    '<p class="err" id="bkErr"></p>' +
+    '<button class="btn block" id="bkSave">Add to the calendar</button>' +
+    '<button class="btn ghost block" id="bkCancel" style="margin-top:9px">Cancel</button>'
+  );
+
+  gid("bkCust").onchange = function(){
+    gid("bkNew").style.display = gid("bkCust").value ? "none" : "block";
+  };
+  gid("bkRate").onchange = function(){
+    var o = gid("bkRate").selectedOptions[0];
+    if (!o || !o.value) return;
+    if (!gid("bkPrice").value) gid("bkPrice").value = o.getAttribute("data-price");
+    if (!gid("bkHours").value) gid("bkHours").value = o.getAttribute("data-hours");
+  };
+  gid("bkCancel").onclick = closeDrawer;
+
+  function submit(force){
+    var b = gid("bkSave"); b.disabled = true; b.textContent = "Saving…";
+    gid("bkErr").textContent = "";
+    api("/api/bookings", {method:"POST", body:{
+      customerId: gid("bkCust").value || null,
+      name: gid("bkName") ? gid("bkName").value.trim() : "",
+      phone: gid("bkPhone") ? gid("bkPhone").value.trim() : "",
+      email: gid("bkEmail") ? gid("bkEmail").value.trim() : "",
+      date: gid("bkDate").value, time: gid("bkTime").value,
+      destCode: gid("bkRate").value || null,
+      pickup: gid("bkPickup").value.trim(), dropoff: gid("bkDrop").value.trim(),
+      price: gid("bkPrice").value === "" ? null : Number(gid("bkPrice").value),
+      hours: gid("bkHours").value === "" ? null : Number(gid("bkHours").value),
+      passengers: gid("bkPax").value, flight: gid("bkFlight").value.trim(),
+      notes: gid("bkNotes").value.trim(), force: force || false
+    }}).then(function(r){
+      b.disabled = false; b.textContent = "Add to the calendar";
+      if (r.ok){
+        closeDrawer(); toast("Added to the calendar");
+        if (S.view === "calendar") loadCal(); else viewRides();
+        return;
+      }
+      if (r.status === 409 && r.data && r.data.canForce){
+        // A clash is worth a warning, not a veto — Matt knows things
+        // the calendar does not.
+        gid("bkErr").innerHTML = esc(r.data.error) +
+          '<br/><button class="btn sm" id="bkForce" style="margin-top:8px">Book it anyway</button>';
+        gid("bkForce").onclick = function(){ submit(true); };
+        return;
+      }
+      gid("bkErr").textContent = (r.data && r.data.error) || "Could not save that.";
+    });
+  }
+  gid("bkSave").onclick = function(){ submit(false); };
 }
 
 function openTimeOff(dateStr, hour){
@@ -776,6 +882,8 @@ function openTimeOff(dateStr, hour){
    RIDES
    ============================================================ */
 function viewRides(){
+  gid("headActions").innerHTML = '<button class="btn sm" id="addRide2">New booking</button>';
+  gid("addRide2").onclick = function(){ openBooking(todayStr()); };
   gid("view").innerHTML = '<div class="empty">Loading…</div>';
   api("/api/bookings").then(function(r){
     S.bookings = (r.ok && r.data.bookings) || [];
@@ -823,9 +931,56 @@ function openRide(id){
     (b.customer_phone ? '<div class="acts2">' +
       '<a class="btn ghost" href="tel:' + esc(b.customer_phone) + '">Call</a>' +
       '<a class="btn ghost" href="sms:' + esc(b.customer_phone) + '">Text</a></div>' : "") +
+    '<div class="sechead">Reschedule</div>' +
+    '<div class="acts2">' +
+      '<div class="field"><label>Date</label><input type="date" id="edDate" value="' + esc(b.ride_date || "") + '"/></div>' +
+      '<div class="field"><label>Time</label><input type="time" id="edTime" step="900" value="' + esc(b.ride_time || "") + '"/></div>' +
+    '</div>' +
+    '<div class="acts2">' +
+      '<div class="field"><label>Price ($)</label><input id="edPrice" inputmode="decimal" value="' + (b.quoted_total != null ? b.quoted_total : "") + '"/></div>' +
+      '<div class="field"><label>Status</label><select id="edStatus">' +
+        ["new","confirmed","done"].map(function(x){
+          return '<option value="' + x + '"' + (b.status===x?" selected":"") + '>' + x + '</option>';
+        }).join("") + '</select></div>' +
+    '</div>' +
+    '<button class="btn block" id="edSave">Save changes</button>' +
+    (b.status !== "canceled"
+      ? '<div class="sechead">Cancel</div>' +
+        (Number(b.amount_charged) > 0
+          ? '<label style="text-transform:none;letter-spacing:0;font-size:.85rem;color:var(--body)">' +
+            '<input type="checkbox" id="edRefund" checked style="width:auto;margin-right:8px"/>' +
+            'Also refund the $' + money(b.amount_charged) + ' already charged</label>'
+          : '<p style="font-size:.85rem;color:var(--muted)">Nothing has been charged for this ride.</p>') +
+        '<button class="btn danger block" id="edCancel" style="margin-top:10px">Cancel this ride</button>'
+      : '') +
     '<button class="btn ghost block" id="rClose" style="margin-top:12px">Close</button>'
   );
   gid("rClose").onclick = closeDrawer;
+  gid("edSave").onclick = function(){
+    var btn = gid("edSave"); btn.disabled = true; btn.textContent = "Saving…";
+    api("/api/bookings/" + b.id + "/edit", {method:"PATCH", body:{
+      date: gid("edDate").value, time: gid("edTime").value,
+      price: gid("edPrice").value === "" ? null : Number(gid("edPrice").value),
+      status: gid("edStatus").value
+    }}).then(function(r){
+      btn.disabled = false; btn.textContent = "Save changes";
+      if (!r.ok){ toast((r.data && r.data.error) || "Could not save"); return; }
+      toast("Ride updated"); closeDrawer();
+      if (S.view === "calendar") loadCal(); else viewRides();
+    });
+  };
+
+  if (gid("edCancel")) gid("edCancel").onclick = function(){
+    var btn = gid("edCancel"); btn.disabled = true; btn.textContent = "Cancelling…";
+    var wantRefund = gid("edRefund") ? gid("edRefund").checked : false;
+    api("/api/bookings/" + b.id + "/cancel", {method:"POST", body:{refund: wantRefund}}).then(function(r){
+      btn.disabled = false; btn.textContent = "Cancel this ride";
+      if (!r.ok){ toast((r.data && r.data.error) || "Could not cancel"); return; }
+      toast(r.data.refunded ? "Cancelled and money returned" : "Cancelled");
+      closeDrawer();
+      if (S.view === "calendar") loadCal(); else viewRides();
+    });
+  };
 }
 
 /* ============================================================
@@ -1046,7 +1201,8 @@ function openInvoiceDetail(inv){
       '<span style="font:500 1.5rem/1 var(--serif)">$' + money(inv.total) + '</span></div>' +
     (paid
       ? '<div class="sechead">Paid</div><div class="dl"><span>' + esc((inv.paid_at||"").slice(0,16)) + '</span>' +
-        '<span>' + (inv.card_last4 ? "card ending " + esc(inv.card_last4) : "") + '</span></div>'
+        '<span>' + (inv.card_last4 ? "card ending " + esc(inv.card_last4) : "") + '</span></div>' +
+        '<button class="btn danger block" id="ivRefund" style="margin-top:12px">Refund $' + money(inv.total) + '</button>' 
       : '<div class="sechead">Payment link</div>' +
         '<div class="linkbox"><input id="ivLink" readonly value="' + esc(inv.pay_url || "") + '"/>' +
         '<button class="btn ghost sm" id="ivCopy">Copy</button></div>' +
@@ -1056,7 +1212,18 @@ function openInvoiceDetail(inv){
     '<button class="btn ghost block" id="ivClose" style="margin-top:9px">Close</button>'
   );
   gid("ivClose").onclick = closeDrawer;
-  if (paid) return;
+  if (paid){
+    gid("ivRefund").onclick = function(){
+      var b = gid("ivRefund"); b.disabled = true; b.textContent = "Refunding…";
+      api("/api/invoices/" + inv.id + "/refund", {method:"POST"}).then(function(r){
+        b.disabled = false; b.textContent = "Refund $" + money(inv.total);
+        if (!r.ok){ toast((r.data && r.data.error) || "The bank refused it"); return; }
+        toast(r.data.mode === "void" ? "Voided before settlement" : "Refunded");
+        closeDrawer(); viewInvoices();
+      });
+    };
+    return;
+  }
 
   gid("ivCopy").onclick = function(){
     var f = gid("ivLink"); f.select(); f.setSelectionRange(0,99999);
@@ -1142,7 +1309,18 @@ function viewSettings(){
 
       '<div class="panel"><div class="ph"><h3>Signed-in devices</h3>' +
         '<button class="btn ghost sm" id="revokeAll">Sign out everywhere else</button></div>' +
-        '<div class="pb flush" id="sessList"><div class="empty">Loading…</div></div></div>';
+        '<div class="pb flush" id="sessList"><div class="empty">Loading…</div></div></div>' +
+
+      '<div class="panel"><div class="ph"><h3>Backup</h3>' +
+        '<a class="btn ghost sm" href="/api/export" download>Download a backup</a></div>' +
+        '<div class="pb"><p style="font-size:.85rem;color:var(--muted);margin:0">' +
+        'Every customer, ride, invoice and payment as one JSON file. Keep a copy somewhere ' +
+        'that is not Cloudflare. Your password and session tokens are not included.' +
+        '</p></div></div>' +
+
+      '<div class="panel"><div class="ph"><h3>Activity</h3>' +
+        '<span style="font-size:.75rem;color:var(--muted)">Everything that changed money or settings</span></div>' +
+        '<div class="pb flush" id="auditList"><div class="empty">Loading…</div></div></div>';
 
     html += '<div class="panel"><div class="ph"><h3>Connections</h3></div><div class="pb">' +
       conn("Email (Resend)", r.data.integrations.resend, r.data.notifications.from) +
@@ -1186,6 +1364,7 @@ function viewSettings(){
     }
 
     loadSessions();
+    loadAudit();
     gid("revokeAll").onclick = function(){
       api("/api/sessions/revoke-all", {method:"POST"}).then(function(rr){
         toast(rr.ok ? "Every other device signed out" : "Could not do that");
@@ -1233,6 +1412,21 @@ function loadSessions(){
         };
       })(bs[i]);
     }
+  });
+}
+
+function loadAudit(){
+  api("/api/audit?limit=60").then(function(r){
+    var box = gid("auditList");
+    if (!box) return;
+    var list = (r.ok && r.data.events) || [];
+    if (!list.length){ box.innerHTML = '<div class="empty">Nothing recorded yet.</div>'; return; }
+    box.innerHTML = list.map(function(e){
+      return '<div class="row" style="cursor:default"><div>' +
+        '<div class="t">' + esc(e.summary || e.action) + '</div>' +
+        '<div class="m">' + esc((e.created_at || "").slice(0,16)) + ' · ' + esc(e.action) +
+          (e.ip ? ' · ' + esc(e.ip) : '') + '</div></div></div>';
+    }).join("");
   });
 }
 

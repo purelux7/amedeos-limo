@@ -27,6 +27,8 @@ import {
 import { runScheduled, runDigest } from "./cron.js";
 import { DASHBOARD_HTML } from "./dashboard.js";
 import { BACKOFFICE_HTML } from "./backoffice-ui.js";
+import { createBooking, updateBooking, cancelBooking, refundInvoice } from "./admin-bookings.js";
+import { audit, auditList } from "./audit.js";
 import {
   createSession, validSession, destroySession, revokeAll, listSessions,
   cookieHeader, CLEAR_COOKIE, loginBlocked, noteFailure, clearFailures,
@@ -35,7 +37,7 @@ import { PAY_HTML } from "./paypage.js";
 import {
   checkAdminPassword, changePassword, stats,
   customerDetail, updateCustomer,
-  getSettings, patchSettings, patchRate,
+  getSettings, patchSettings, patchRate, exportAll,
 } from "./backoffice.js";
 import {
   listInvoices, getInvoice, createInvoice, updateInvoice,
@@ -265,6 +267,32 @@ export default {
           return json(out, 200, cors);
         }
 
+        // ---------- bookings taken by phone ----------
+        if (path === "/api/bookings" && method === "POST") {
+          return await createBooking(request, env, cors);
+        }
+        const mBookEdit = path.match(/^\/api\/bookings\/(\d+)\/edit$/);
+        if (mBookEdit && (method === "PATCH" || method === "POST")) {
+          return await updateBooking(request, env, cors, Number(mBookEdit[1]));
+        }
+        const mBookCancel = path.match(/^\/api\/bookings\/(\d+)\/cancel$/);
+        if (mBookCancel && method === "POST") {
+          return await cancelBooking(request, env, cors, Number(mBookCancel[1]));
+        }
+        const mInvRefund = path.match(/^\/api\/invoices\/(\d+)\/refund$/);
+        if (mInvRefund && method === "POST") {
+          return await refundInvoice(request, env, cors, Number(mInvRefund[1]));
+        }
+
+        if (path === "/api/export" && method === "GET") {
+          return await exportAll(env, cors);
+        }
+
+        // ---------- audit ----------
+        if (path === "/api/audit" && method === "GET") {
+          return await auditList(env, cors, url);
+        }
+
         // ---------- sessions ----------
         if (path === "/api/sessions" && method === "GET") {
           return json({ sessions: await listSessions(env, request) }, 200, cors);
@@ -328,7 +356,7 @@ export default {
         }
         const mInvVoid = path.match(/^\/api\/invoices\/(\d+)\/void$/);
         if (mInvVoid && method === "POST") {
-          return await voidInvoice(env, cors, Number(mInvVoid[1]));
+          return await voidInvoice(env, cors, Number(mInvVoid[1]), request);
         }
 
         // ---------- calendar ----------

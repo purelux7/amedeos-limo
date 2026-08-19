@@ -13,6 +13,7 @@
 
 import { loadSettings, loadRates, money } from "./engine.js";
 import { revokeAll } from "./sessions.js";
+import { audit } from "./audit.js";
 
 function json(body, status, cors) {
   return new Response(JSON.stringify(body), {
@@ -109,6 +110,10 @@ export async function changePassword(request, env, cors) {
   // computer, a cookie someone copied. The session making the change
   // survives, so Matt is not thrown out of the screen he is standing in.
   await revokeAll(env, request, { keepCurrent: true });
+  await audit(env, request, {
+    action: "auth.password_change", entity: "auth",
+    summary: "Password changed; all other devices signed out",
+  });
 
   return json({ ok: true }, 200, cors);
 }
@@ -333,6 +338,11 @@ export async function patchSettings(request, env, cors) {
     changed.push(key);
   }
   if (!changed.length) return json({ error: "Nothing recognised to save." }, 400, cors);
+  await audit(env, request, {
+    action: "settings.update", entity: "settings",
+    summary: "Changed " + changed.join(", "),
+    detail: Object.fromEntries(changed.map((k) => [k, d[k]])),
+  });
   return await getSettings(env, cors);
 }
 
@@ -355,7 +365,53 @@ export async function patchRate(request, env, cors, code) {
   sets.push("updated_at = datetime('now')");
   vals.push(code);
   await env.DB.prepare(`UPDATE rates SET ${sets.join(", ")} WHERE code = ?`).bind(...vals).run();
+  await audit(env, request, {
+    action: "rate.update", entity: "settings", entityId: code,
+    summary: `Rate ${code}` + ("price" in d ? ` set to $${Number(d.price).toFixed(2)}` : " updated"),
+  });
   return await getSettings(env, cors);
+}
+
+/* ------------------------------------------------------------
+   Backup.
+
+   Every booking, customer and invoice lives in one Cloudflare
+   database. D1 keeps 30 days of time travel, which covers an
+   accident, but nothing covers the account itself going away. This
+   is a plain JSON dump anyone can read, keep in Dropbox, and hand to
+   an accountant — no tooling, no vendor, no restore procedure to
+   remember.
+   ------------------------------------------------------------ */
+const BACKUP_TABLES = [
+  "customers", "bookings", "invoices", "invoice_items", "charges",
+  "blackouts", "settings", "rates", "message_log", "audit_log",
+];
+
+export async function exportAll(env, cors) {
+  const out = { exportedAt: new Date().toISOString(), tables: {} };
+  for (const t of BACKUP_TABLES) {
+    try {
+      const { results } = await env.DB.prepare(`SELECT * FROM ${t}`).all();
+      out.tables[t] = results || [];
+    } catch (e) {
+      // A table that does not exist in this database is not a failure;
+      // it just means a migration has not run here.
+      out.tables[t] = { error: String((e && e.message) || e) };
+    }
+  }
+  // Session tokens and the password hash are credentials, not records.
+  if (Array.isArray(out.tables.settings)) {
+    out.tables.settings = out.tables.settings.filter((r) => r.key !== "admin_password_hash");
+  }
+  const stamp = out.exportedAt.slice(0, 10);
+  return new Response(JSON.stringify(out, null, 2), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": `attachment; filename="amedeos-backup-${stamp}.json"`,
+      ...cors,
+    },
+  });
 }
 
 export { getSetting, putSetting };
