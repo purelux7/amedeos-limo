@@ -511,6 +511,20 @@
       form.hidden = true;
       success.hidden = false;
       success.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // GTM/GA4 conversion event. This is a fetch-based submit, not a native
+      // form POST, so GTM's built-in Form Submission trigger never fires for
+      // it — this custom dataLayer event is what the "Booking Submitted"
+      // trigger in GTM should listen for instead. Safe to run even before a
+      // GTM container is installed, since it just seeds window.dataLayer.
+      try {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          event: "booking_submit",
+          booking_value: j.quote && j.quote.total,
+          booking_currency: "USD"
+        });
+      } catch (e) {}
     }
   }
 

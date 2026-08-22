@@ -102,6 +102,14 @@ export default {
     if (method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
     try {
+      // ---------- crawler control (this subdomain is the booking/admin backend, not public content) ----------
+      if (path === "/robots.txt" && method === "GET") {
+        return new Response("User-agent: *\nDisallow: /\n", {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8", ...cors },
+        });
+      }
+
       // ---------- public booking endpoint ----------
       if ((path === "/reserve" || path === "/") && method === "POST") {
         return await handleReserve(request, env, cors);

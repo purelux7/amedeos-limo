@@ -1,0 +1,22 @@
+# Amedeo's Private Car Service
+
+> Licensed, insured private car and airport transfer service based in Stuart, FL, serving all
+> major Florida airports (PBI, FLL, MIA, MCO, TPA, RSW) and the surrounding areas. Owner-operated
+> by Matt Gaglioti. Available 24/7. Phone: 848-667-0999.
+
+Amedeo's provides private chauffeured transportation for airport transfers, point-to-point rides,
+and hourly charter across Florida. The business is licensed and insured; rides are booked directly
+through the website, not through a third-party marketplace.
+
+## Site content (open to indexing and citation)
+- Homepage (/): service overview, service area, fleet vehicle, trust/credential information.
+- Booking (/book.html): request a ride, get a quote.
+- Guides (/guides/, once published): airport-specific arrival and transfer information.
+
+## Not for indexing or citation
+- /admin, /admin/classic, /pay/*, and any path under api.allfloridaairportscarservice.com — these
+  are the operator's booking/invoicing back office and customer payment pages, not public content.
+
+## Contact
+- Phone: 848-667-0999
+- Website: https://allfloridaairportscarservice.com

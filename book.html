@@ -6,6 +6,16 @@
 <title>Book a Ride — Amedeo's Private Car Service</title>
 <meta name="description" content="Reserve a private chauffeur to any Florida airport. Flat rates, no surge, and nothing charged until the day before your ride." />
 
+<meta property="og:title" content="Book a Ride — Amedeo's Private Car Service" />
+<meta property="og:description" content="Reserve a private chauffeur to any Florida airport. Flat rates, no surge, and nothing charged until the day before your ride." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://allfloridaairportscarservice.com/book.html" />
+<meta property="og:image" content="https://allfloridaairportscarservice.com/assets/hero.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Book a Ride — Amedeo's Private Car Service" />
+<meta name="twitter:description" content="Reserve a private chauffeur to any Florida airport. Flat rates, no surge, and nothing charged until the day before your ride." />
+<meta name="twitter:image" content="https://allfloridaairportscarservice.com/assets/hero.jpg" />
+
 <!-- Accept.js. Card data goes from the browser STRAIGHT to Authorize.net.
      It never touches this site's server, which is what keeps us at PCI SAQ A-EP
      instead of full SAQ D. The card inputs below deliberately have NO name
@@ -96,6 +106,37 @@
   @media (max-width:30rem){ .row,.row3{grid-template-columns:1fr} }
 </style>
   <link rel="canonical" href="https://allfloridaairportscarservice.com/book.html" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://allfloridaairportscarservice.com/#organization",
+  "name": "Amedeo's Private Car Service",
+  "url": "https://allfloridaairportscarservice.com/",
+  "telephone": "+1-848-667-0999",
+  "image": "https://allfloridaairportscarservice.com/assets/hero.jpg"
+}
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://allfloridaairportscarservice.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Book a Ride",
+      "item": "https://allfloridaairportscarservice.com/book.html"
+    }
+  ]
+}
+  </script>
 </head>
 <body>
 
@@ -465,6 +506,18 @@
     }).join("");
     $("manageLink").href = j.manageUrl;
     window.scrollTo(0, 0);
+
+    // GTM/GA4 conversion event — this is a fetch-based submit, not a native
+    // form POST, so GTM's built-in Form Submission trigger never fires for
+    // it. Build the "Booking Submitted" trigger in GTM off this event.
+    try {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: "booking_submit",
+        booking_value: j.quote && j.quote.total,
+        booking_currency: "USD"
+      });
+    } catch (e) {}
   }
 })();
 </script>

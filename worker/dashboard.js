@@ -17,6 +17,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <meta name="theme-color" content="#14171c"/>
+<meta name="robots" content="noindex,nofollow"/>
 <title>Amedeo's</title>
 <style>
   :root{--navy:#14171c;--navy2:#232830;--gold:#c8a961;--gold-d:#8a6d2f;
