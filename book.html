@@ -258,6 +258,7 @@
       <p class="lede" id="doneSub" style="margin-bottom:0"></p>
       <div class="recap" id="doneRecap"></div>
       <div style="margin-top:20px">
+        <a class="btn" id="bookReturnLink" style="display:block;text-decoration:none;text-align:center;padding:14px;margin-bottom:10px" href="/book.html">Book your return trip</a>
         <a class="btn secondary" id="manageLink" style="display:block;text-decoration:none;text-align:center;padding:14px" href="#">View or cancel this booking</a>
       </div>
     </div>
@@ -519,6 +520,21 @@
       });
     } catch (e) {}
   }
+
+  // If the browser restores this page from bfcache (e.g. the customer hits
+  // Back after booking their first leg to book a return), the module-level
+  // `busy` flag and the submit button's disabled/"Confirming…" state would
+  // otherwise stay frozen from the moment of the earlier submit — the form
+  // looks dead and nothing the customer does sends a second request.
+  // event.persisted is true only on a bfcache restore, not a normal load.
+  window.addEventListener("pageshow", function (event) {
+    if (!event.persisted) return;
+    busy = false;
+    var btn = $("submit");
+    if (btn) { btn.disabled = false; btn.textContent = "Confirm booking"; }
+    var err = $("formErr");
+    if (err) err.textContent = "";
+  });
 })();
 </script>
 </body>
